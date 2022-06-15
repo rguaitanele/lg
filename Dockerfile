@@ -1,4 +1,4 @@
-FROM php:8.1-apache
+FROM php:7.4-apache
 
 RUN apt update \
     && apt -y install bash ssh openssl libgmp-dev libgmp3-dev sshpass graphviz \

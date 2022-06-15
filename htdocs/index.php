@@ -1950,6 +1950,37 @@ function parse_out($output, $check = FALSE)
 		return $output;
 	}
 
+        // Huawei
+        if (preg_match("/^display bgp peer/", $exec))
+        {
+
+                $output = preg_replace_callback(
+                        "/( 4 )([ ]*)([0-9]{0,6})/",
+                        function ($matches) {
+                                return $matches[1].$matches[2].link_as($matches[3]);
+                        },
+                        $output
+                );
+                $output = preg_replace_callback(
+                        "/^(  )([0-9\.A-Fa-f:]+)( )/",
+                        function ($matches) {
+                                global $lastip;
+                                $lastip=$matches[2];
+                                return $matches[1].link_whois($matches[2]).$matches[3];
+                        },
+                        $output
+                );
+                $output = preg_replace_callback(
+                        "/( Established )([ ]* )([0-9]{1,6})/",
+                        function ($matches) use ($lastip) {
+                                return $matches[1].$matches[2].link_command("received-routes", $lastip, $matches[3]);
+                        },
+                        $output
+                );
+                return $output;
+        }
+
+
 	if (preg_match("/bgp/", $exec))
 	{
 		$output = preg_replace("|^(BGP routing table entry for) (\S+)|", "\\1 <b>\\2</b>", $output);

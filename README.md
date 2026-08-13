@@ -22,6 +22,31 @@ PHP Version of BGP Looking Glass script, based on the Perl sources: https://gith
 2. Copy **lg_config.php.example** file as **lg_config.php** into your web server home directory.
 3. Edit **lg_config.php** configuration file (see parameters description below).
 
+### Docker
+The published image contains the application code. Keep `lg_config.php` and SSH
+private keys outside the image and mount them read-only at runtime:
+
+```bash
+docker run -d \
+  --name lg \
+  --restart always \
+  -p 8082:80 \
+  -v "$PWD/htdocs/lg_config.php:/var/www/html/lg_config.php:ro" \
+  -v "$PWD/keys:/opt/lg/keys:ro" \
+  rguaitanele/lg_hsdn:latest
+```
+
+Available Docker Hub tags:
+
+- `dev`: image generated from the `dev` branch.
+- `latest`: stable image generated from `master`.
+- Version tags: immutable releases generated from Git tags.
+
+The GitLab CI pipeline publishes the same image to the GitLab Container
+Registry and Docker Hub. Configure the protected CI/CD variables
+`DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` before running it. Creating a Git tag
+publishes that version and also promotes it to `latest`.
+
 ### Configuration Parameters
 #### Branding Configuration
 - `$_CONFIG['asn']` - Your AS number for display on the LG page.

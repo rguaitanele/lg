@@ -1,13 +1,31 @@
 FROM php:7.4-apache
 
-RUN apt update \
-    && apt -y install bash ssh openssl libgmp-dev libgmp3-dev sshpass graphviz \
+ARG BUILD_DATE=unknown
+ARG VCS_REF=unknown
+ARG IMAGE_VERSION=dev
+
+LABEL org.opencontainers.image.title="HSDN PHP Looking Glass" \
+      org.opencontainers.image.description="BGP Looking Glass com suporte a SSH, IPv4 e IPv6" \
+      org.opencontainers.image.source="https://gitlab.blz.com.br/Infra/lg" \
+      org.opencontainers.image.url="https://hub.docker.com/r/rguaitanele/lg_hsdn" \
+      org.opencontainers.image.created="${BUILD_DATE}" \
+      org.opencontainers.image.revision="${VCS_REF}" \
+      org.opencontainers.image.version="${IMAGE_VERSION}"
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends bash ssh openssl libgmp-dev libgmp3-dev sshpass graphviz \
     && pear install Image_GraphViz-1.3.0 \
     && ln -s /usr/include/x86_64-linux-gnu/gmp.h /usr/include/gmp.h \
     && docker-php-ext-install -j$(nproc) gmp \
     && a2enmod remoteip \
-    && apt purge -y \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir -p /var/log/ \
     && touch /var/log/looking-glass.log \
     && chown www-data /var/log/looking-glass.log
+
+COPY htdocs/ /var/www/html/
+
+EXPOSE 80
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD php -r 'exit(@file_get_contents("http://127.0.0.1/") === false ? 1 : 0);'

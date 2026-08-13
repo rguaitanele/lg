@@ -1,0 +1,62 @@
+stages:
+  - build
+
+variables:
+  DOCKER_HOST: "tcp://docker:2375"
+  DOCKER_TLS_CERTDIR: ""
+  DOCKERHUB_REPOSITORY: "lg_hsdn"
+
+build-container:
+  stage: build
+  image: docker:27-cli
+  services:
+    - name: docker:27-dind-rootless
+      alias: docker
+      command: ["--tls=false"]
+  before_script:
+    - |
+      if [ -z "${CI_REGISTRY:-}" ] || [ -z "${CI_REGISTRY_IMAGE:-}" ]; then
+        echo "ERRO: o Container Registry não está habilitado nesta instância do GitLab."
+        exit 1
+      fi
+    - docker info
+    - echo "$CI_REGISTRY_PASSWORD" | docker login --username "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+    - |
+      if [ -z "${DOCKERHUB_USERNAME:-}" ] || [ -z "${DOCKERHUB_TOKEN:-}" ]; then
+        echo "ERRO: DOCKERHUB_USERNAME e DOCKERHUB_TOKEN não estão disponíveis."
+        exit 1
+      fi
+      echo "$DOCKERHUB_TOKEN" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+  script:
+    - |
+      if [ -n "$CI_COMMIT_TAG" ]; then
+        VERSION="$CI_COMMIT_TAG"
+      elif [ "$CI_COMMIT_BRANCH" = "master" ]; then
+        VERSION="latest"
+      else
+        VERSION="dev"
+      fi
+
+      IMAGE="$CI_REGISTRY_IMAGE:$VERSION"
+      docker build --pull \
+        --build-arg BUILD_DATE="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+        --build-arg VCS_REF="$CI_COMMIT_SHA" \
+        --build-arg IMAGE_VERSION="$VERSION" \
+        --tag "$IMAGE" .
+      docker push "$IMAGE"
+
+      DOCKERHUB_IMAGE="$DOCKERHUB_USERNAME/$DOCKERHUB_REPOSITORY:$VERSION"
+      docker tag "$IMAGE" "$DOCKERHUB_IMAGE"
+      docker push "$DOCKERHUB_IMAGE"
+
+      if [ -n "$CI_COMMIT_TAG" ]; then
+        docker tag "$IMAGE" "$CI_REGISTRY_IMAGE:latest"
+        docker push "$CI_REGISTRY_IMAGE:latest"
+
+        docker tag "$IMAGE" "$DOCKERHUB_USERNAME/$DOCKERHUB_REPOSITORY:latest"
+        docker push "$DOCKERHUB_USERNAME/$DOCKERHUB_REPOSITORY:latest"
+      fi
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev"'
+    - if: '$CI_COMMIT_BRANCH == "master"'
+    - if: '$CI_COMMIT_TAG'

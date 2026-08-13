@@ -1,0 +1,5 @@
+.git
+.gitlab-ci.yml
+htdocs/lg_config.php
+keys/*
+!keys/.gitignore

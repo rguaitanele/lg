@@ -268,6 +268,17 @@ if ($privileged_command_denied)
 {
 	$denied_client_ip = get_client_ip();
 	error_log('LG denied privileged command "'.$command.'" from client '.$denied_client_ip);
+	if (!empty($_CONFIG['privilegedips']) AND is_array($_CONFIG['privilegedips']))
+	{
+		foreach ($_CONFIG['privilegedips'] as $allowed_ip)
+		{
+			error_log(
+				'LG allowlist check: client='.$denied_client_ip
+				.' rule='.trim($allowed_ip)
+				.' match='.(ip_matches_rule($denied_client_ip, trim($allowed_ip)) ? 'yes' : 'no')
+			);
+		}
+	}
 	http_response_code(403);
 	print '<div class="center"><p class="error">This query is restricted to authorized IP addresses. '
 		.'Detected client IP: '.htmlspecialchars($denied_client_ip, ENT_QUOTES, 'UTF-8').'.</p></div>';
@@ -1067,24 +1078,19 @@ function ip_matches_rule($client_ip, $rule)
 		return FALSE;
 	}
 
-	$full_bytes = (int) floor($prefix / 8);
-	$remaining_bits = $prefix % 8;
-
-	if ($full_bytes > 0
-		AND substr($client_binary, 0, $full_bytes) !== substr($network_binary, 0, $full_bytes))
+	for ($bit = 0; $bit < $prefix; $bit++)
 	{
-		return FALSE;
+		$byte = (int) floor($bit / 8);
+		$mask = 1 << (7 - ($bit % 8));
+
+		if ((ord($client_binary[$byte]) & $mask)
+			!= (ord($network_binary[$byte]) & $mask))
+		{
+			return FALSE;
+		}
 	}
 
-	if ($remaining_bits == 0)
-	{
-		return TRUE;
-	}
-
-	$mask = (0xFF << (8 - $remaining_bits)) & 0xFF;
-
-	return (ord($client_binary[$full_bytes]) & $mask)
-		=== (ord($network_binary[$full_bytes]) & $mask);
+	return TRUE;
 }
 
 /**

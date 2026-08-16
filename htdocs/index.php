@@ -1036,6 +1036,9 @@ function get_client_ip()
  */
 function ip_matches_rule($client_ip, $rule)
 {
+	$client_ip = trim($client_ip);
+	$rule = trim($rule);
+
 	if (strpos($rule, '/') === FALSE)
 	{
 		$client_binary = @inet_pton($client_ip);
@@ -1045,13 +1048,13 @@ function ip_matches_rule($client_ip, $rule)
 			AND $client_binary === $rule_binary;
 	}
 
-	list($network, $prefix) = explode('/', $rule, 2);
+	list($network, $prefix) = array_map('trim', explode('/', $rule, 2));
 	$client_binary = @inet_pton($client_ip);
 	$network_binary = @inet_pton($network);
 
 	if ($client_binary === FALSE OR $network_binary === FALSE
 		OR strlen($client_binary) !== strlen($network_binary)
-		OR !ctype_digit($prefix))
+		OR !preg_match('/^[0-9]+$/D', $prefix))
 	{
 		return FALSE;
 	}

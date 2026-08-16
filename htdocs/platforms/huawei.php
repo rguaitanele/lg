@@ -54,7 +54,7 @@ function huawei_parse_output_line($output, $exec)
 	}
 
 	$output = preg_replace_callback(
-		'/( 4 )([ ]*)([0-9]{0,6})/',
+		'/( 4 )([ ]*)([0-9]+)/',
 		function ($matches) {
 			return $matches[1].$matches[2].link_as($matches[3]);
 		},
@@ -72,7 +72,7 @@ function huawei_parse_output_line($output, $exec)
 	);
 
 	$output = preg_replace_callback(
-		'/( Established )([ ]* )([0-9]{1,6})/',
+		'/( Established )([ ]* )([0-9]+)/',
 		function ($matches) use ($lastip) {
 			return $matches[1].$matches[2].link_command('received-routes', $lastip, $matches[3]);
 		},

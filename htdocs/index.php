@@ -192,6 +192,10 @@ if ($privileged_command_denied OR $command != 'graph' OR !isset($_REQUEST['rende
 			var peerInventory = <?php print $peer_suggestions_json ?>;
 			var peerInventoryEmpty = <?php print json_encode(t('peer_inventory_empty')) ?>;
 			var peerInventoryUpdated = <?php print json_encode(t('peer_inventory_updated')) ?>;
+			var defaultQueryLabel = <?php print json_encode(t('query')) ?>;
+			var peerQueryLabel = <?php print json_encode(t('peer')) ?>;
+			var defaultQueryHelp = <?php print json_encode(t('query_help')) ?>;
+			var peerQueryHelp = <?php print json_encode(t('peer_help')) ?>;
 
 			function load() {
 				var loading = document.getElementById('loading');
@@ -204,12 +208,17 @@ if ($privileged_command_denied OR $command != 'graph' OR !isset($_REQUEST['rende
 				var selected = document.querySelector('input[name="command"]:checked');
 				var query = document.getElementById('query');
 				var queryField = document.getElementById('query-field');
+				var queryLabel = document.getElementById('query-label');
+				var queryHelp = document.getElementById('query-help');
 				if (!selected || !query) return;
+				var peerQuery = selected.value === 'advertised-routes' || selected.value === 'received-routes';
 				query.disabled = selected.value === 'summary';
 				query.required = selected.value !== 'summary';
 				if (queryField) queryField.style.display = query.disabled ? 'none' : 'block';
 				query.placeholder = selected.getAttribute('data-placeholder') || '';
-				if (selected.value === 'advertised-routes') {
+				if (queryLabel) queryLabel.textContent = peerQuery ? peerQueryLabel : defaultQueryLabel;
+				if (queryHelp) queryHelp.textContent = peerQuery ? peerQueryHelp : defaultQueryHelp;
+				if (peerQuery) {
 					query.setAttribute('list', 'peer-options');
 					updatePeerOptions();
 				} else {
@@ -434,7 +443,7 @@ if (!$privileged_command_denied AND isset($_CONFIG['routers'][$router]) AND
 		$exec = $queries[$os][$protocol][$command];
 	}
 
-	if ($command == 'advertised-routes' AND $os == 'huawei'
+	if (($command == 'advertised-routes' OR $command == 'received-routes') AND $os == 'huawei'
 		AND filter_var($query, FILTER_VALIDATE_IP) === FALSE)
 	{
 		$exec = FALSE;
@@ -635,7 +644,7 @@ else
 	$routers = group_routers($_CONFIG['routers']);
 	$selected_command = $command ? $command : 'bgp';
 	$visible_commands = is_privileged_client()
-		? array('bgp', 'advertised-routes', 'summary', 'graph', 'trace', 'ping')
+		? array('bgp', 'advertised-routes', 'received-routes', 'summary', 'graph', 'trace', 'ping')
 		: array('bgp', 'trace', 'ping');
 
 	if (!in_array($selected_command, $visible_commands, TRUE))
@@ -653,6 +662,7 @@ else
 						<label class="query-option"><input type="radio" name="command" value="bgp" data-placeholder="<?php print htmlspecialchars(t('placeholder_route')) ?>" onchange="updateQueryField()"<?php print $selected_command == 'bgp' ? ' checked' : '' ?>> <span><?php print htmlspecialchars(t('bgp_route')) ?></span></label>
 <?php if (is_privileged_client()): ?>
 						<label class="query-option"><input type="radio" name="command" value="advertised-routes" data-placeholder="<?php print htmlspecialchars(t('placeholder_peer')) ?>" onchange="updateQueryField()"<?php print $selected_command == 'advertised-routes' ? ' checked' : '' ?>> <span><?php print htmlspecialchars(t('advertised_routes')) ?></span></label>
+						<label class="query-option"><input type="radio" name="command" value="received-routes" data-placeholder="<?php print htmlspecialchars(t('placeholder_peer')) ?>" onchange="updateQueryField()"<?php print $selected_command == 'received-routes' ? ' checked' : '' ?>> <span><?php print htmlspecialchars(t('received_routes')) ?></span></label>
 						<label class="query-option"><input type="radio" name="command" value="summary" data-placeholder="<?php print htmlspecialchars(t('placeholder_none')) ?>" onchange="updateQueryField()"<?php print $selected_command == 'summary' ? ' checked' : '' ?>> <span><?php print htmlspecialchars(t('bgp_summary')) ?></span></label>
 						<label class="query-option"><input type="radio" name="command" value="graph" data-placeholder="<?php print htmlspecialchars(t('placeholder_route')) ?>" onchange="updateQueryField()"<?php print $selected_command == 'graph' ? ' checked' : '' ?>> <span><?php print htmlspecialchars(t('bgp_graph')) ?></span></label>
 <?php endif ?>
@@ -662,10 +672,10 @@ else
 				</fieldset>
 				<div class="fields">
 					<div id="query-field">
-						<label class="field-label" for="query"><?php print htmlspecialchars(t('query')) ?></label>
+						<label class="field-label" id="query-label" for="query"><?php print htmlspecialchars(t('query')) ?></label>
 						<input type="text" id="query" name="query" value="<?php print htmlspecialchars($query !== FALSE ? $query : '') ?>">
 						<datalist id="peer-options"></datalist>
-						<p class="help"><?php print htmlspecialchars(t('query_help')) ?></p>
+						<p class="help" id="query-help"><?php print htmlspecialchars(t('query_help')) ?></p>
 						<p class="help" id="peer-inventory-help" style="display:none"></p>
 					</div>
 					<div class="field-row">

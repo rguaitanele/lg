@@ -88,7 +88,7 @@ $router = isset($_REQUEST['router']) ? trim($_REQUEST['router']) : FALSE;
 $protocol = isset($_REQUEST['protocol']) ? trim($_REQUEST['protocol']) : FALSE;
 $command = isset($_REQUEST['command']) ? trim($_REQUEST['command']) : FALSE;
 $query = isset($_REQUEST['query']) ? trim($_REQUEST['query']) : FALSE;
-$privileged_command_denied = is_privileged_command($command) AND !is_privileged_client();
+$privileged_command_denied = is_privileged_command($command) && !is_privileged_client();
 
 if ($privileged_command_denied OR $command != 'graph' OR !isset($_REQUEST['render']) OR !isset($_CONFIG['routers'][$router]))
 {
@@ -268,17 +268,6 @@ if ($privileged_command_denied)
 {
 	$denied_client_ip = get_client_ip();
 	error_log('LG denied privileged command "'.$command.'" from client '.$denied_client_ip);
-	if (!empty($_CONFIG['privilegedips']) AND is_array($_CONFIG['privilegedips']))
-	{
-		foreach ($_CONFIG['privilegedips'] as $allowed_ip)
-		{
-			error_log(
-				'LG allowlist check: client='.$denied_client_ip
-				.' rule='.trim($allowed_ip)
-				.' match='.(ip_matches_rule($denied_client_ip, trim($allowed_ip)) ? 'yes' : 'no')
-			);
-		}
-	}
 	http_response_code(403);
 	print '<div class="center"><p class="error">This query is restricted to authorized IP addresses. '
 		.'Detected client IP: '.htmlspecialchars($denied_client_ip, ENT_QUOTES, 'UTF-8').'.</p></div>';

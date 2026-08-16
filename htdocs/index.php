@@ -915,13 +915,22 @@ function process($url, $exec, $return_buffer = FALSE)
 				{
 					print '<p class="error">'.htmlspecialchars(sprintf(t('command_timeout'), $timeout)).'</p>';
 				}
-				else if ($process_status == 0 AND !$return_buffer AND $os == 'huawei'
-					AND $command == 'summary')
+				else if (!$return_buffer AND $os == 'huawei' AND $command == 'summary')
 				{
 					$peer_snapshot = huawei_parse_bgp_peers($raw_output);
+					error_log(
+						'LG Huawei peer inventory: router='.$router
+						.' protocol='.$protocol
+						.' peers='.count($peer_snapshot)
+						.' ssh_exit='.$process_status
+					);
 					if (!empty($peer_snapshot))
 					{
-						peer_inventory_store_snapshot($router, $protocol, $peer_snapshot);
+						$inventory_written = peer_inventory_store_snapshot($router, $protocol, $peer_snapshot);
+						error_log(
+							'LG Huawei peer inventory write: router='.$router
+							.' result='.($inventory_written ? 'success' : 'failed')
+						);
 					}
 				}
 			}

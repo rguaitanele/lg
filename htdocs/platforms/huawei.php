@@ -82,3 +82,70 @@ function huawei_parse_output_line($output, $exec)
 	return $output;
 }
 
+/**
+ * Extract AS paths from detailed Huawei BGP route output for GraphViz.
+ */
+function huawei_parse_bgp_path($output)
+{
+	$best = FALSE;
+	$pathes = array();
+
+	if (!preg_match_all(
+		'/^\s*AS-path\s+([^,\r\n]+),\s*([^\r\n]*)/im',
+		$output,
+		$matches,
+		PREG_SET_ORDER
+	))
+	{
+		return FALSE;
+	}
+
+	foreach ($matches as $match)
+	{
+		$raw_path = trim($match[1]);
+		$attributes = $match[2];
+
+		// A local route has no external AS path to draw.
+		if (strcasecmp($raw_path, 'Nil') == 0)
+		{
+			continue;
+		}
+
+		$path = parse_as_path($raw_path);
+
+		if (empty($path))
+		{
+			continue;
+		}
+
+		$path_id = count($pathes);
+		$pathes[] = $path;
+
+		if (preg_match('/(?:^|,\s*)best(?:,|\s|$)/i', $attributes)
+			AND preg_match('/(?:^|,\s*)select(?:,|\s|$)/i', $attributes))
+		{
+			$best = $path_id;
+		}
+	}
+
+	if (empty($pathes))
+	{
+		return array
+		(
+			'best' => FALSE,
+			'pathes' => array(),
+		);
+	}
+
+	// Some VRP releases omit the selection attributes when only one path exists.
+	if ($best === FALSE AND count($pathes) == 1)
+	{
+		$best = 0;
+	}
+
+	return array
+	(
+		'best' => $best,
+		'pathes' => $pathes,
+	);
+}

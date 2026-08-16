@@ -2074,6 +2074,11 @@ function parse_bgp_path($output)
 
 	$output = str_replace("\r\n", "\n", $output);
 
+	if ($os == 'huawei')
+	{
+		return huawei_parse_bgp_path($output);
+	}
+
 	// MikroTik
 	if (preg_match("/^\/(ip|ipv6) route print detail/i", $exec) AND $os == 'mikrotik')
 	{

@@ -67,6 +67,11 @@ $_CONFIG = array
     'ssh' => '/usr/bin/ssh',
 	'ipwhois' => 'http://noc.hsdn.org/whois/',
 	'aswhois' => 'http://noc.hsdn.org/aswhois/',
+	'commandtimeout' => 60,
+	'pingtimeout' => 15,
+	'tracetimeout' => 40,
+	'routestimeout' => 900,
+	'privilegedips' => array(),
 	'routers' => array(),
 );
 
@@ -83,8 +88,9 @@ $router = isset($_REQUEST['router']) ? trim($_REQUEST['router']) : FALSE;
 $protocol = isset($_REQUEST['protocol']) ? trim($_REQUEST['protocol']) : FALSE;
 $command = isset($_REQUEST['command']) ? trim($_REQUEST['command']) : FALSE;
 $query = isset($_REQUEST['query']) ? trim($_REQUEST['query']) : FALSE;
+$privileged_command_denied = is_privileged_command($command) AND !is_privileged_client();
 
-if ($command != 'graph' OR !isset($_REQUEST['render']) OR !isset($_CONFIG['routers'][$router]))
+if ($privileged_command_denied OR $command != 'graph' OR !isset($_REQUEST['render']) OR !isset($_CONFIG['routers'][$router]))
 {
 // HTML header
 ?>
@@ -258,7 +264,14 @@ $queries = array
 	'huawei' => huawei_queries(),
 );
 
-if (isset($_CONFIG['routers'][$router]) AND 
+if ($privileged_command_denied)
+{
+	http_response_code(403);
+	print '<div class="center"><p class="error">This query is restricted to authorized IP addresses.</p></div>';
+	print '<hr>';
+}
+
+if (!$privileged_command_denied AND isset($_CONFIG['routers'][$router]) AND
 	isset($queries[$_CONFIG['routers'][$router]['os']][$protocol]) AND
 	(isset($queries[$_CONFIG['routers'][$router]['os']][$protocol][$command]) OR $command == 'graph'))
 {
@@ -453,7 +466,7 @@ if (isset($_CONFIG['routers'][$router]) AND
 			<p>BGP routing graph for <b><?php print $query ?></b>, router: <b><?php print $_CONFIG['routers'][$router]['description'] ?></b></p>
 			<p><a href="?command=bgp&amp;protocol=<?php print $protocol ?>&amp;query=<?php print $query ?>&amp;router=<?php print $router ?>">Run a bgp command on this router</a></p>
 			<table border="0" class="legend">
-				<tr><td bgcolor="#CCCCFF" width="15">&nbsp;</td><td>Upstream AS</td><td width="80">&nbsp;</td><td bgcolor="#CCFFCC" width="15">&nbsp;</td><td>Peering AS</td><td width="80">&nbsp;</td><td bgcolor="white"><div style="height:12px;width:37px;background-image:url('data:image/gif;base64,R0lGODlhJQAMAOcAAAQCBISChJQ2NMTCxERCRcSCTGRiZYRWNEw2HKSipOTi5CQiJWRCJORCROyiXPzClISGnFRSVXRydKyi5DQyNRQSFJSSqdwCBPTy99xqlNTS1PwiJNSGvMSm7FxGRGxijIR+fPzk5JySzPSKVLS0tCQlNFxSdCQXDERCXOTC3LS21Dw6PSwCBNQeHAwKDPxSLHxyo+x2hNTS9MTG5KRyROzs7JSGwRwaHeyitPzU1KSivGxsbGRagVxaXXx8fLSq8ZycnPw0NOSaXLyCTExKTrxqbHwiJPylpDQzRPz+/GxuhCwqN4yOjJRkPEQ+WeTk/CwsLPRCTKSa3PwUFBQOCtza/Py0tNSPVGxKLIyKn1RVZBQWHPwDBPz09PxkZPybnIR3rFxcbExKZPzExDw6VPx8fNzO/KyqxJyatPQeLBQCBMzMzERGVGRldFw+JDQiFHRyhNzb3PQqPPTu/PyEhLy8vLyy/AwNFPxVVMzK6pSOxBweLOza7Lyq9HxunDQuQfxMTLwmJPzavPyUlMyb3JxaXLx+TFRKbCQeLOxufKysrPSuvORKZMSy/OTO7Hx+lPwKDIyCt/x0dPzc3Pw8PPysrPy8vPxsbPzNzPyMjPxaXIyKjMyOzHRqlcyKVCweFLy+3JSWlNyWW4R+tJxqPMTC3LSyzFw6PPwaHPwsLPzs7AwGBFQ5JGxGLPSiYLSi5hwSDKSV1ExCXLy61tzW/Dw1TJSSlOzi9PxERKya3BwWJMQqLISClNTW5CwmNKx2ROzs/PSmtGxsfHx7jJyarOyeXJxmPHRNLFxafExKbJyOzIx+fPR2hIx+tAQGBERGRWRmZOTm5CQmJWRGLPzGnFRWVDQ2NZSWrPT298Sq9GxmjlxWeTw+PQwODNTW9pSKxBweHaSmvWRehFxeXExOTCwuNNze/IyOpExOXDw+TKyuypyetXR2iMzO7Lyu+FROcPwODHRunPweHfSmZLSm7ExGZOzm/Kye44SGhMTGxIRaNKSmpHR2dBQWFNTW1PwmJCwAAAAAJQAMAAAIagCTCBxIsKBBVQYTKlxo8AsXL5YYSpzokAuXKZIwTdxYsKJFi/LK5OC40ePHj6kyhRh4pKXLlzBjXjpJ82OQRElq6tw5ZWfNKCQb+rQYZFDQhCZPpqIz6ajCpCFHOl1YccqlMVMnHoG4MSAAOw==')"></div></td><td>Best route</td></tr>
+				<tr><td bgcolor="#CCCCFF" width="15">&nbsp;</td><td>Alternative-path neighbor AS</td><td width="80">&nbsp;</td><td bgcolor="#CCFFCC" width="15">&nbsp;</td><td>Best-path neighbor AS</td><td width="80">&nbsp;</td><td bgcolor="white"><div style="height:12px;width:37px;background-image:url('data:image/gif;base64,R0lGODlhJQAMAOcAAAQCBISChJQ2NMTCxERCRcSCTGRiZYRWNEw2HKSipOTi5CQiJWRCJORCROyiXPzClISGnFRSVXRydKyi5DQyNRQSFJSSqdwCBPTy99xqlNTS1PwiJNSGvMSm7FxGRGxijIR+fPzk5JySzPSKVLS0tCQlNFxSdCQXDERCXOTC3LS21Dw6PSwCBNQeHAwKDPxSLHxyo+x2hNTS9MTG5KRyROzs7JSGwRwaHeyitPzU1KSivGxsbGRagVxaXXx8fLSq8ZycnPw0NOSaXLyCTExKTrxqbHwiJPylpDQzRPz+/GxuhCwqN4yOjJRkPEQ+WeTk/CwsLPRCTKSa3PwUFBQOCtza/Py0tNSPVGxKLIyKn1RVZBQWHPwDBPz09PxkZPybnIR3rFxcbExKZPzExDw6VPx8fNzO/KyqxJyatPQeLBQCBMzMzERGVGRldFw+JDQiFHRyhNzb3PQqPPTu/PyEhLy8vLyy/AwNFPxVVMzK6pSOxBweLOza7Lyq9HxunDQuQfxMTLwmJPzavPyUlMyb3JxaXLx+TFRKbCQeLOxufKysrPSuvORKZMSy/OTO7Hx+lPwKDIyCt/x0dPzc3Pw8PPysrPy8vPxsbPzNzPyMjPxaXIyKjMyOzHRqlcyKVCweFLy+3JSWlNyWW4R+tJxqPMTC3LSyzFw6PPwaHPwsLPzs7AwGBFQ5JGxGLPSiYLSi5hwSDKSV1ExCXLy61tzW/Dw1TJSSlOzi9PxERKya3BwWJMQqLISClNTW5CwmNKx2ROzs/PSmtGxsfHx7jJyarOyeXJxmPHRNLFxafExKbJyOzIx+fPR2hIx+tAQGBERGRWRmZOTm5CQmJWRGLPzGnFRWVDQ2NZSWrPT298Sq9GxmjlxWeTw+PQwODNTW9pSKxBweHaSmvWRehFxeXExOTCwuNNze/IyOpExOXDw+TKyuypyetXR2iMzO7Lyu+FROcPwODHRunPweHfSmZLSm7ExGZOzm/Kye44SGhMTGxIRaNKSmpHR2dBQWFNTW1PwmJCwAAAAAJQAMAAAIagCTCBxIsKBBVQYTKlxo8AsXL5YYSpzokAuXKZIwTdxYsKJFi/LK5OC40ePHj6kyhRh4pKXLlzBjXjpJ82OQRElq6tw5ZWfNKCQb+rQYZFDQhCZPpqIz6ajCpCFHOl1YccqlMVMnHoG4MSAAOw==')"></div></td><td>Best route</td></tr>
 			</table>
 			<br>
 			<div id="loading" style="display:inline"><p><b>Please wait...</b></p></div>
@@ -494,9 +507,11 @@ else
 				<tr><td>
 				<table border="0" cellpadding="2" cellspacing="2">
 					<tr><td><input type="radio" name="command" id="bgp" value="bgp" checked="checked"></td><td><label for="bgp">bgp route</label></td></tr>
+<?php if (is_privileged_client()): ?>
 					<tr><td><input type="radio" name="command" id="advertised-routes" value="advertised-routes"></td><td><label for="advertised-routes">bgp&nbsp;advertised-routes</label></td></tr>
 					<tr><td><input type="radio" name="command" id="summary" value="summary"></td><td><label for="summary">bgp&nbsp;summary</label></td></tr>
 					<tr><td><input type="radio" name="command" id="graph" value="graph"></td><td><label for="graph">bgp graph</label></td></tr>
+<?php endif ?>
 					<tr><td><input type="radio" name="command" id="trace" value="trace"></td><td><label for="trace">traceroute</label></td></tr>
 					<tr><td><input type="radio" name="command" id="ping" value="ping"></td><td><label for="ping">ping</label></td></tr>
 					<tr><td></td><td style="padding-top:10px">
@@ -684,7 +699,12 @@ function process($url, $exec, $return_buffer = FALSE)
 				@shell_exec('echo n | '.$ssh_path.' '.implode(' ', $params).' screen-length 0 temporary');
 			}*/
 
-			if ($fp = @popen('echo n | '.$ssh_path.' '.implode(' ', $params).' '.$exec, 'r'))
+			$timeout = get_command_timeout($command);
+			$shell_command = 'echo n | '.$ssh_path.' '.implode(' ', $params).' '.$exec;
+			$timed_command = '/usr/bin/timeout --signal=TERM --kill-after=5s '
+				.$timeout.'s sh -c '.escapeshellarg($shell_command);
+
+			if ($fp = @popen($timed_command, 'r'))
 			{
 				while (!feof($fp))
 				{
@@ -726,7 +746,12 @@ function process($url, $exec, $return_buffer = FALSE)
 					}
 				}
 
-				pclose($fp);
+				$process_status = pclose($fp);
+
+				if (($process_status == 124 OR $process_status == 137) AND !$return_buffer)
+				{
+					print '<p class="error">Command timed out after '.$timeout.' seconds.</p>';
+				}
 			}
 
 			if (empty($lines) AND !$line)
@@ -920,6 +945,132 @@ function process($url, $exec, $return_buffer = FALSE)
 	}
 
 	flush();
+}
+
+/**
+ * Return a finite wall-clock timeout for remote commands.
+ */
+function get_command_timeout($command)
+{
+	global $_CONFIG;
+
+	if ($command == 'ping')
+	{
+		$key = 'pingtimeout';
+		$default = 15;
+	}
+	else if ($command == 'trace')
+	{
+		$key = 'tracetimeout';
+		$default = 40;
+	}
+	else if ($command == 'advertised-routes'
+		OR $command == 'received-routes'
+		OR $command == 'routes')
+	{
+		$key = 'routestimeout';
+		$default = 900;
+	}
+	else
+	{
+		$key = 'commandtimeout';
+		$default = 60;
+	}
+
+	$timeout = isset($_CONFIG[$key]) ? (int) $_CONFIG[$key] : $default;
+
+	return max(5, min($timeout, 3600));
+}
+
+/**
+ * Administrative BGP commands restricted by client IP.
+ */
+function is_privileged_command($command)
+{
+	return in_array(
+		$command,
+		array('advertised-routes', 'received-routes', 'routes', 'summary', 'graph'),
+		TRUE
+	);
+}
+
+/**
+ * Check the direct client address against the configured allowlist.
+ */
+function is_privileged_client()
+{
+	global $_CONFIG;
+
+	if (!isset($_SERVER['REMOTE_ADDR']) OR empty($_CONFIG['privilegedips'])
+		OR !is_array($_CONFIG['privilegedips']))
+	{
+		return FALSE;
+	}
+
+	$client_ip = trim($_SERVER['REMOTE_ADDR']);
+
+	foreach ($_CONFIG['privilegedips'] as $allowed_ip)
+	{
+		if (ip_matches_rule($client_ip, trim($allowed_ip)))
+		{
+			return TRUE;
+		}
+	}
+
+	return FALSE;
+}
+
+/**
+ * Match an IPv4/IPv6 address against an exact address or CIDR rule.
+ */
+function ip_matches_rule($client_ip, $rule)
+{
+	if (strpos($rule, '/') === FALSE)
+	{
+		$client_binary = @inet_pton($client_ip);
+		$rule_binary = @inet_pton($rule);
+
+		return $client_binary !== FALSE AND $rule_binary !== FALSE
+			AND $client_binary === $rule_binary;
+	}
+
+	list($network, $prefix) = explode('/', $rule, 2);
+	$client_binary = @inet_pton($client_ip);
+	$network_binary = @inet_pton($network);
+
+	if ($client_binary === FALSE OR $network_binary === FALSE
+		OR strlen($client_binary) !== strlen($network_binary)
+		OR !ctype_digit($prefix))
+	{
+		return FALSE;
+	}
+
+	$prefix = (int) $prefix;
+	$max_bits = strlen($client_binary) * 8;
+
+	if ($prefix < 0 OR $prefix > $max_bits)
+	{
+		return FALSE;
+	}
+
+	$full_bytes = (int) floor($prefix / 8);
+	$remaining_bits = $prefix % 8;
+
+	if ($full_bytes > 0
+		AND substr($client_binary, 0, $full_bytes) !== substr($network_binary, 0, $full_bytes))
+	{
+		return FALSE;
+	}
+
+	if ($remaining_bits == 0)
+	{
+		return TRUE;
+	}
+
+	$mask = (0xFF << (8 - $remaining_bits)) & 0xFF;
+
+	return (ord($client_binary[$full_bytes]) & $mask)
+		=== (ord($network_binary[$full_bytes]) & $mask);
 }
 
 /**
@@ -2337,6 +2488,11 @@ function link_command($command, $query, $name = '', $return_uri = FALSE)
 	if ($name == '')
 	{
 		$name = $query;
+	}
+
+	if (is_privileged_command($command) AND !is_privileged_client())
+	{
+		return htmlspecialchars($name);
 	}
 
 	$uri = '?router='.$router.

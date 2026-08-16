@@ -19,6 +19,18 @@ $_CONFIG['plink'] = '/usr/local/bin/plink';
 $_CONFIG['ipwhois'] = 'https://bgp.he.net/ip/';
 $_CONFIG['aswhois'] = 'https://bgp.he.net/AS';
 
+// Limites máximos, em segundos, para comandos remotos.
+$_CONFIG['commandtimeout'] = 60;
+$_CONFIG['pingtimeout'] = 15;
+$_CONFIG['tracetimeout'] = 40;
+$_CONFIG['routestimeout'] = 900;
+
+// IPs que podem acessar status, gráfico e tabelas completas de rotas BGP.
+$_CONFIG['privilegedips'] = array(
+    '203.0.113.10',       // IP individual
+    '198.51.100.0/24',    // rede IPv4 de exemplo
+);
+
 $_CONFIG['routers'] = array(
     'ne8000-01' => array(
         'url' => 'ssh://lookingglass@192.0.2.10:22',
@@ -29,4 +41,3 @@ $_CONFIG['routers'] = array(
         'os' => 'huawei',
     ),
 );
-

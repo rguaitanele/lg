@@ -14,8 +14,8 @@ function huawei_queries()
 			'received-routes' => 'display bgp routing-table peer %s received-routes',
 			'routes' => 'display bgp routing-table peer %s received-routes active',
 			'summary' => 'display bgp peer',
-			'ping' => 'ping %s',
-			'trace' => 'tracert %s',
+			'ping' => 'ping -c 5 -t 1000 %s',
+			'trace' => 'tracert -m 30 -q 1 -w 1000 %s',
 		),
 		'ipv6' => array
 		(
@@ -24,8 +24,8 @@ function huawei_queries()
 			'received-routes' => 'display bgp ipv6 routing-table peer %s received-routes',
 			'routes' => 'display bgp ipv6 routing-table peer %s received-routes active',
 			'summary' => 'display bgp ipv6 peer',
-			'ping' => 'ping ipv6 %s',
-			'trace' => 'tracert ipv6 %s',
+			'ping' => 'ping ipv6 -c 5 -t 1000 %s',
+			'trace' => 'tracert ipv6 -m 30 -q 1 -w 1000 %s',
 		)
 	);
 }

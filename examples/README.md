@@ -137,3 +137,28 @@ primeiro comando não imprimir `CHAVE_LEGIVEL`, corrija no host:
 sudo chown 33:33 keys/id_rsa
 sudo chmod 600 keys/id_rsa
 ```
+
+## Restringir consultas completas por IP
+
+As consultas administrativas podem expor o estado BGP ou retornar mais de um
+milhão de rotas. Libere-as somente para endereços administrativos:
+
+```php
+$_CONFIG['privilegedips'] = array(
+    'SEU_IP_PUBLICO',
+    '198.51.100.0/24',
+);
+```
+
+A lista aceita endereços individuais e redes CIDR IPv4 ou IPv6. Os endereços
+usados neste exemplo pertencem a blocos reservados para documentação; substitua
+pelos endereços autorizados da sua instalação.
+
+Para visitantes fora da lista, ficam disponíveis somente `bgp route`, `ping` e
+`traceroute`. As consultas `bgp summary`, `bgp graph`, `advertised-routes`,
+`received-routes` e `routes` são ocultadas e tentativas de montar a URL
+manualmente recebem HTTP 403 antes de abrir uma sessão no roteador.
+
+A verificação usa apenas `REMOTE_ADDR`; ela não confia em `X-Forwarded-For`. Se
+o LG estiver atrás de um proxy reverso, configure o `mod_remoteip` somente com
+os endereços dos proxies confiáveis antes de usar essa lista.

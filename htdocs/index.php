@@ -266,8 +266,11 @@ $queries = array
 
 if ($privileged_command_denied)
 {
+	$denied_client_ip = get_client_ip();
+	error_log('LG denied privileged command "'.$command.'" from client '.$denied_client_ip);
 	http_response_code(403);
-	print '<div class="center"><p class="error">This query is restricted to authorized IP addresses.</p></div>';
+	print '<div class="center"><p class="error">This query is restricted to authorized IP addresses. '
+		.'Detected client IP: '.htmlspecialchars($denied_client_ip, ENT_QUOTES, 'UTF-8').'.</p></div>';
 	print '<hr>';
 }
 
@@ -1001,13 +1004,13 @@ function is_privileged_client()
 {
 	global $_CONFIG;
 
-	if (!isset($_SERVER['REMOTE_ADDR']) OR empty($_CONFIG['privilegedips'])
+	if (empty($_CONFIG['privilegedips'])
 		OR !is_array($_CONFIG['privilegedips']))
 	{
 		return FALSE;
 	}
 
-	$client_ip = trim($_SERVER['REMOTE_ADDR']);
+	$client_ip = get_client_ip();
 
 	foreach ($_CONFIG['privilegedips'] as $allowed_ip)
 	{
@@ -1018,6 +1021,14 @@ function is_privileged_client()
 	}
 
 	return FALSE;
+}
+
+/**
+ * Return only the direct address seen by Apache.
+ */
+function get_client_ip()
+{
+	return isset($_SERVER['REMOTE_ADDR']) ? trim($_SERVER['REMOTE_ADDR']) : 'unknown';
 }
 
 /**

@@ -47,6 +47,9 @@ Registry and Docker Hub. Configure the protected CI/CD variables
 `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` before running it. Creating a Git tag
 publishes that version and also promotes it to `latest`.
 
+Operational examples for the startup script, SSH key generation and a
+read-only Huawei NE8000 user are available in [`examples/`](examples/README.md).
+
 ### Configuration Parameters
 #### Branding Configuration
 - `$_CONFIG['asn']` - Your AS number for display on the LG page.

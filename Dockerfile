@@ -4,6 +4,8 @@ ARG BUILD_DATE=unknown
 ARG VCS_REF=unknown
 ARG IMAGE_VERSION=dev
 
+ENV HOME=/var/www
+
 LABEL org.opencontainers.image.title="HSDN PHP Looking Glass" \
       org.opencontainers.image.description="BGP Looking Glass com suporte a SSH, IPv4 e IPv6" \
       org.opencontainers.image.source="https://gitlab.blz.com.br/Infra/lg" \
@@ -19,9 +21,13 @@ RUN apt-get update \
     && docker-php-ext-install -j$(nproc) gmp \
     && a2enmod remoteip \
     && rm -rf /var/lib/apt/lists/* \
-    && mkdir -p /var/log/ \
+    && mkdir -p /var/log/ /var/www/.ssh \
     && touch /var/log/looking-glass.log \
-    && chown www-data /var/log/looking-glass.log
+    && touch /var/www/.ssh/known_hosts \
+    && chown www-data:www-data /var/log/looking-glass.log \
+    && chown -R www-data:www-data /var/www/.ssh \
+    && chmod 700 /var/www/.ssh \
+    && chmod 600 /var/www/.ssh/known_hosts
 
 COPY htdocs/ /var/www/html/
 

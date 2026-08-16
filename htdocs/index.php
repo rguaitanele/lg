@@ -77,6 +77,8 @@ if (file_exists('lg_config.php') AND is_readable('lg_config.php'))
 	require_once 'lg_config.php';
 }
 
+require_once __DIR__.'/platforms/huawei.php';
+
 $router = isset($_REQUEST['router']) ? trim($_REQUEST['router']) : FALSE; 
 $protocol = isset($_REQUEST['protocol']) ? trim($_REQUEST['protocol']) : FALSE;
 $command = isset($_REQUEST['command']) ? trim($_REQUEST['command']) : FALSE;
@@ -253,29 +255,7 @@ $queries = array
 			'trace' => 'traceroute6 %s',
 		)
 	),
-	'huawei' => array
-	(
-		'ipv4' => array
-		(
-			'bgp' => 'display bgp routing-table %s',
-			'advertised-routes'	=> 'display bgp routing-table peer %s advertised-routes',
-			'received-routes' => 'display bgp routing-table peer %s received-routes',
-			'routes'	=> 'display bgp routing-table peer %s received-routes active',
-			'summary' => 'display bgp peer',
-			'ping' => 'ping %s',
-			'trace' => 'tracert %s',
-		),
-		'ipv6' => array
-		(
-			'bgp' => 'display bgp ipv6 routing-table %s',
-			'advertised-routes' => 'display bgp ipv6 routing-table peer %s advertised-routes',
-			'received-routes' => 'display bgp ipv6 routing-table peer %s received-routes',
-			'routes'	=> 'display bgp ipv6 routing-table peer %s received-routes active',
-			'summary' => 'display bgp ipv6 peer',
-			'ping' => 'ping ipv6 %s',
-			'trace' => 'tracert ipv6 %s',
-		)
-	),
+	'huawei' => huawei_queries(),
 );
 
 if (isset($_CONFIG['routers'][$router]) AND 
@@ -612,7 +592,8 @@ function process($url, $exec, $return_buffer = FALSE)
                                 $params[] = '-p '.$url['port'];
                             }
 
-                            $params[] = '-o StrictHostKeyChecking=no';
+                            $params[] = '-o StrictHostKeyChecking=accept-new';
+                            $params[] = '-o UserKnownHostsFile=/var/www/.ssh/known_hosts';
                             break;
 
                         // Use plink command
@@ -656,7 +637,10 @@ function process($url, $exec, $return_buffer = FALSE)
                         $params[] = '-p '.$url['port'];
                     }
 
-                    $params[] = '-o StrictHostKeyChecking=no';
+                    $params[] = '-o StrictHostKeyChecking=accept-new';
+                    $params[] = '-o UserKnownHostsFile=/var/www/.ssh/known_hosts';
+                    $params[] = '-o BatchMode=yes';
+                    $params[] = '-o IdentitiesOnly=yes';
                     break;
             }
 
@@ -706,6 +690,11 @@ function process($url, $exec, $return_buffer = FALSE)
 				while (!feof($fp))
 				{
 					if (!$output = fgets($fp, 1024))
+					{
+						continue;
+					}
+
+					if ($os == 'huawei' AND huawei_should_ignore_output_line($output))
 					{
 						continue;
 					}
@@ -1950,35 +1939,15 @@ function parse_out($output, $check = FALSE)
 		return $output;
 	}
 
-        // Huawei
-        if (preg_match("/^display bgp peer/", $exec))
-        {
+	if ($os == 'huawei')
+	{
+		$huawei_output = huawei_parse_output_line($output, $exec);
 
-                $output = preg_replace_callback(
-                        "/( 4 )([ ]*)([0-9]{0,6})/",
-                        function ($matches) {
-                                return $matches[1].$matches[2].link_as($matches[3]);
-                        },
-                        $output
-                );
-                $output = preg_replace_callback(
-                        "/^(  )([0-9\.A-Fa-f:]+)( )/",
-                        function ($matches) {
-                                global $lastip;
-                                $lastip=$matches[2];
-                                return $matches[1].link_whois($matches[2]).$matches[3];
-                        },
-                        $output
-                );
-                $output = preg_replace_callback(
-                        "/( Established )([ ]* )([0-9]{1,6})/",
-                        function ($matches) use ($lastip) {
-                                return $matches[1].$matches[2].link_command("received-routes", $lastip, $matches[3]);
-                        },
-                        $output
-                );
-                return $output;
-        }
+		if ($huawei_output !== NULL)
+		{
+			return $huawei_output;
+		}
+	}
 
 
 	if (preg_match("/bgp/", $exec))

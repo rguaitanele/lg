@@ -1,0 +1,32 @@
+<?php isset($_CONFIG) or die('No direct access allowed.');
+
+// Identidade visual
+$_CONFIG['asn'] = '64512';
+$_CONFIG['company'] = 'Minha Empresa';
+$_CONFIG['logo'] = 'lg_logo.gif';
+$_CONFIG['color'] = '#E48559';
+
+// Autenticação SSH global
+$_CONFIG['sshauthtype'] = 'privatekey';
+$_CONFIG['sshprivatekeypath'] = '/opt/lg/keys/id_rsa';
+$_CONFIG['ssh'] = '/usr/bin/ssh';
+
+// Mantidos para compatibilidade; não são usados com privatekey.
+$_CONFIG['sshpwdcommand'] = 'sshpass';
+$_CONFIG['sshpass'] = '/usr/bin/sshpass';
+$_CONFIG['plink'] = '/usr/local/bin/plink';
+
+$_CONFIG['ipwhois'] = 'https://bgp.he.net/ip/';
+$_CONFIG['aswhois'] = 'https://bgp.he.net/AS';
+
+$_CONFIG['routers'] = array(
+    'ne8000-01' => array(
+        'url' => 'ssh://lookingglass@192.0.2.10:22',
+        'pingtraceurl' => FALSE,
+        'description' => 'Huawei NE8000-01',
+        'group' => 'AS64512',
+        'ipv6' => TRUE,
+        'os' => 'huawei',
+    ),
+);
+

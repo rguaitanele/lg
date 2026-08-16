@@ -37,6 +37,10 @@ docker run -d \
   rguaitanele/lg_hsdn:latest
 ```
 
+The peer inventory works in the container without an additional volume. To
+preserve it when the container is recreated, optionally mount a writable host
+directory at `/var/lib/lg`.
+
 Available Docker Hub tags:
 
 - `dev`: image generated from the `dev` branch.

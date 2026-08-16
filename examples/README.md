@@ -115,6 +115,35 @@ docker logs --tail 100 lg
 O script baixa a imagem `dev`, recria somente o container e preserva
 `config/lg_config.php` e `keys/` no host.
 
+## Inventário automático de peers BGP
+
+Quando uma consulta `Status BGP` Huawei termina com sucesso, o Looking Glass
+salva os peers encontrados em `/var/lib/lg/peers.json`. A imagem já cria esse
+diretório com permissão de escrita, portanto o recurso funciona mesmo sem
+montar uma pasta do host. Nesse caso, o inventário é perdido quando o container
+é removido e recriado.
+
+Em `Rotas anunciadas`, o campo do peer sugere os endereços aprendidos para o
+roteador e protocolo selecionados, incluindo ASN, nome e estado. O campo também
+aceita a digitação manual de um IPv4 ou IPv6 que ainda não foi aprendido.
+
+Para preservar o inventário nas atualizações, crie o diretório posteriormente:
+
+```bash
+mkdir -p /home/docker/lg/data
+sudo chown 33:33 /home/docker/lg/data
+sudo chmod 770 /home/docker/lg/data
+```
+
+E acrescente ao `docker run`:
+
+```bash
+-v "$PWD/data:/var/lib/lg"
+```
+
+O arquivo contém somente os peers, ASNs, nomes, estados e horários de
+atualização. Credenciais e chaves SSH não são armazenadas nele.
+
 ## Testar o SSH como o usuário da aplicação
 
 O Apache/PHP executa como `www-data`. Testar como `root` não valida as mesmas

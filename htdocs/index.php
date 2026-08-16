@@ -71,6 +71,7 @@ $_CONFIG = array
 	'pingtimeout' => 15,
 	'tracetimeout' => 40,
 	'routestimeout' => 900,
+	'peerinventorypath' => '/var/lib/lg/peers.json',
 	'privilegedips' => array(),
 	'routers' => array(),
 );
@@ -99,12 +100,19 @@ if (file_exists('lg_config.php') AND is_readable('lg_config.php'))
 }
 
 require_once __DIR__.'/platforms/huawei.php';
+require_once __DIR__.'/lib/peer_inventory.php';
 
 $router = isset($_REQUEST['router']) ? trim($_REQUEST['router']) : FALSE; 
 $protocol = isset($_REQUEST['protocol']) ? trim($_REQUEST['protocol']) : FALSE;
 $command = isset($_REQUEST['command']) ? trim($_REQUEST['command']) : FALSE;
 $query = isset($_REQUEST['query']) ? trim($_REQUEST['query']) : FALSE;
 $privileged_command_denied = is_privileged_command($command) && !is_privileged_client();
+$peer_suggestions = is_privileged_client() ? peer_inventory_suggestions() : array();
+$peer_suggestions_json = json_encode(
+	$peer_suggestions,
+	JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+);
+if ($peer_suggestions_json === FALSE) $peer_suggestions_json = '{}';
 
 if ($privileged_command_denied OR $command != 'graph' OR !isset($_REQUEST['render']) OR !isset($_CONFIG['routers'][$router]))
 {
@@ -181,6 +189,10 @@ if ($privileged_command_denied OR $command != 'graph' OR !isset($_REQUEST['rende
 			}
 		</style>
 		<script type="text/javascript">
+			var peerInventory = <?php print $peer_suggestions_json ?>;
+			var peerInventoryEmpty = <?php print json_encode(t('peer_inventory_empty')) ?>;
+			var peerInventoryUpdated = <?php print json_encode(t('peer_inventory_updated')) ?>;
+
 			function load() {
 				var loading = document.getElementById('loading');
 				if (loading !== null) {
@@ -197,7 +209,47 @@ if ($privileged_command_denied OR $command != 'graph' OR !isset($_REQUEST['rende
 				query.required = selected.value !== 'summary';
 				if (queryField) queryField.style.display = query.disabled ? 'none' : 'block';
 				query.placeholder = selected.getAttribute('data-placeholder') || '';
+				if (selected.value === 'advertised-routes') {
+					query.setAttribute('list', 'peer-options');
+					updatePeerOptions();
+				} else {
+					query.removeAttribute('list');
+					updatePeerInventoryHelp('');
+				}
 				if (query.disabled) query.value = '';
+			}
+			function updatePeerOptions() {
+				var router = document.getElementById('router');
+				var protocol = document.getElementById('protocol');
+				var list = document.getElementById('peer-options');
+				if (!router || !protocol || !list) return;
+
+				while (list.firstChild) list.removeChild(list.firstChild);
+				var snapshot = peerInventory[router.value] && peerInventory[router.value][protocol.value];
+				if (!snapshot || !snapshot.peers || Object.keys(snapshot.peers).length === 0) {
+					updatePeerInventoryHelp(peerInventoryEmpty);
+					return;
+				}
+
+				Object.keys(snapshot.peers).sort().forEach(function (ip) {
+					var peer = snapshot.peers[ip];
+					var option = document.createElement('option');
+					var details = ['AS' + peer.asn];
+					if (peer.name) details.push(peer.name);
+					if (peer.state) details.push(peer.state);
+					option.value = ip;
+					option.label = details.join(' — ');
+					list.appendChild(option);
+				});
+
+				var updated = snapshot.updated_at ? new Date(snapshot.updated_at).toLocaleString() : '';
+				updatePeerInventoryHelp(peerInventoryUpdated.replace('%s', updated));
+			}
+			function updatePeerInventoryHelp(message) {
+				var help = document.getElementById('peer-inventory-help');
+				if (!help) return;
+				help.textContent = message;
+				help.style.display = message ? 'block' : 'none';
 			}
 		</script>
 	</head>
@@ -382,7 +434,14 @@ if (!$privileged_command_denied AND isset($_CONFIG['routers'][$router]) AND
 		$exec = $queries[$os][$protocol][$command];
 	}
 
-	if (strpos($exec, '%s') !== FALSE)
+	if ($command == 'advertised-routes' AND $os == 'huawei'
+		AND filter_var($query, FILTER_VALIDATE_IP) === FALSE)
+	{
+		$exec = FALSE;
+		print '<div class="notice center"><p class="error">'.htmlspecialchars(t('invalid_peer')).'</p></div>';
+	}
+
+	if ($exec !== FALSE AND strpos($exec, '%s') !== FALSE)
 	{
 		if (preg_match('/^.[.a-z0-9_-]+\.[a-z]+$/i', $query))
 		{
@@ -439,7 +498,7 @@ if (!$privileged_command_denied AND isset($_CONFIG['routers'][$router]) AND
 			}
 		}
 	}
-	else if ($query != '' AND $command != 'graph')
+	else if ($exec !== FALSE AND $query != '' AND $command != 'graph')
 	{
 		print '<div class="notice center"><p class="warning">'.htmlspecialchars(t('parameter_not_needed')).'</p></div>';
 	}
@@ -544,7 +603,7 @@ if (!$privileged_command_denied AND isset($_CONFIG['routers'][$router]) AND
 		<div class="result-card center">
 			<div class="result-header">
 				<p><?php print htmlspecialchars(t('graph_title')) ?> <b><?php print htmlspecialchars($query) ?></b> — <?php print htmlspecialchars(t('router')) ?>: <b><?php print htmlspecialchars($_CONFIG['routers'][$router]['description']) ?></b></p>
-				<a class="secondary-button" href="?"><?php print htmlspecialchars(t('new_query')) ?></a>
+				<a class="secondary-button" href="?router=<?php print urlencode($router) ?>&amp;protocol=<?php print urlencode($protocol) ?>"><?php print htmlspecialchars(t('new_query')) ?></a>
 			</div>
 			<p><a href="?command=bgp&amp;protocol=<?php print urlencode($protocol) ?>&amp;query=<?php print urlencode($query) ?>&amp;router=<?php print urlencode($router) ?>"><?php print htmlspecialchars(t('run_bgp')) ?></a></p>
 			<table border="0" class="legend">
@@ -562,7 +621,7 @@ if (!$privileged_command_denied AND isset($_CONFIG['routers'][$router]) AND
 		}
 		else
 		{
-			print '<div class="result-card"><div class="result-header"><p><b>'.htmlspecialchars(t('router')).':</b> '.htmlspecialchars($_CONFIG['routers'][$router]['description']).'<br><b>'.htmlspecialchars(t('command')).':</b> '.htmlspecialchars($exec).'</p><a class="secondary-button" href="?">'.htmlspecialchars(t('new_query')).'</a></div><pre><code>';
+			print '<div class="result-card"><div class="result-header"><p><b>'.htmlspecialchars(t('router')).':</b> '.htmlspecialchars($_CONFIG['routers'][$router]['description']).'<br><b>'.htmlspecialchars(t('command')).':</b> '.htmlspecialchars($exec).'</p><a class="secondary-button" href="?router='.urlencode($router).'&amp;protocol='.urlencode($protocol).'">'.htmlspecialchars(t('new_query')).'</a></div><pre><code>';
 			flush();
 
 			process($url, $exec);
@@ -605,19 +664,21 @@ else
 					<div id="query-field">
 						<label class="field-label" for="query"><?php print htmlspecialchars(t('query')) ?></label>
 						<input type="text" id="query" name="query" value="<?php print htmlspecialchars($query !== FALSE ? $query : '') ?>">
+						<datalist id="peer-options"></datalist>
 						<p class="help"><?php print htmlspecialchars(t('query_help')) ?></p>
+						<p class="help" id="peer-inventory-help" style="display:none"></p>
 					</div>
 					<div class="field-row">
 						<div>
 							<label class="field-label" for="protocol"><?php print htmlspecialchars(t('protocol')) ?></label>
-							<select id="protocol" name="protocol">
+							<select id="protocol" name="protocol" onchange="updateQueryField()">
 								<option value="ipv4"<?php print $protocol == 'ipv6' ? '' : ' selected' ?>>IPv4</option>
 								<option value="ipv6"<?php print $protocol == 'ipv6' ? ' selected' : '' ?>>IPv6</option>
 							</select>
 						</div>
 						<div>
 							<label class="field-label" for="router"><?php print htmlspecialchars(t('router')) ?></label>
-							<select id="router" name="router">
+							<select id="router" name="router" onchange="updateQueryField()">
 <?php foreach ($routers as $group => $group_data): ?>
 <?php if ($group != ''): ?>
 					<optgroup label="<?php print htmlspecialchars($group) ?>">
@@ -663,6 +724,7 @@ function process($url, $exec, $return_buffer = FALSE)
 
     $sshauthtype = null;
 	$buffer = '';
+	$raw_output = '';
 	$lines = $line = $is_exception = FALSE;
 	$index = 0;
 	$str_in = array();
@@ -817,6 +879,8 @@ function process($url, $exec, $return_buffer = FALSE)
 						continue;
 					}
 
+					$raw_output .= $output;
+
 					$line = !$return_buffer ? parse_out($output, TRUE) : $output;
 
 					if ($line === TRUE)
@@ -850,6 +914,15 @@ function process($url, $exec, $return_buffer = FALSE)
 				if (($process_status == 124 OR $process_status == 137) AND !$return_buffer)
 				{
 					print '<p class="error">'.htmlspecialchars(sprintf(t('command_timeout'), $timeout)).'</p>';
+				}
+				else if ($process_status == 0 AND !$return_buffer AND $os == 'huawei'
+					AND $command == 'summary')
+				{
+					$peer_snapshot = huawei_parse_bgp_peers($raw_output);
+					if (!empty($peer_snapshot))
+					{
+						peer_inventory_store_snapshot($router, $protocol, $peer_snapshot);
+					}
 				}
 			}
 

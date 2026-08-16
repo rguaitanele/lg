@@ -149,3 +149,37 @@ function huawei_parse_bgp_path($output)
 		'pathes' => $pathes,
 	);
 }
+
+/**
+ * Convert a complete Huawei BGP peer summary into structured inventory data.
+ */
+function huawei_parse_bgp_peers($output)
+{
+	$peers = array();
+
+	foreach (preg_split('/\r?\n/', $output) as $line)
+	{
+		if (!preg_match(
+			'/^\s*([0-9A-Fa-f:.]+)\s+\d+\s+(\d+)\s+\d+\s+\d+\s+\d+\s+(\S+)\s+(\S+)\s+(\d+)\s*$/',
+			$line,
+			$matches
+		))
+		{
+			continue;
+		}
+
+		if (filter_var($matches[1], FILTER_VALIDATE_IP) === FALSE)
+		{
+			continue;
+		}
+
+		$peers[$matches[1]] = array(
+			'asn' => $matches[2],
+			'uptime' => $matches[3],
+			'state' => $matches[4],
+			'prefixes' => (int) $matches[5],
+		);
+	}
+
+	return $peers;
+}

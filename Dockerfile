@@ -19,11 +19,12 @@ RUN apt-get update \
     && ln -s /usr/include/x86_64-linux-gnu/gmp.h /usr/include/gmp.h \
     && docker-php-ext-install -j$(nproc) gmp \
     && rm -rf /var/lib/apt/lists/* \
-    && mkdir -p /var/log/ /var/www/.ssh \
+    && mkdir -p /var/log/ /var/www/.ssh /var/lib/lg \
     && touch /var/log/looking-glass.log \
     && touch /var/www/.ssh/known_hosts \
     && chown www-data:www-data /var/log/looking-glass.log \
     && chown -R www-data:www-data /var/www/.ssh \
+    && chown -R www-data:www-data /var/lib/lg \
     && chmod 700 /var/www/.ssh \
     && chmod 600 /var/www/.ssh/known_hosts
 

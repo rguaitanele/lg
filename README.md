@@ -7,6 +7,7 @@ PHP Version of BGP Looking Glass script, based on the Perl sources: https://gith
 - Supports the IPv4 and IPv6 protocols.
 - Automatic conversion IPs to subnets using Merit RADb for MikroTik (http://www.ra.net/).
 - Drawing graph of BGP AS pathes using GraphViz toolkit.
+- Responsive interface with Portuguese and English language selection.
 - Works on php 5.2.0 and above.
 
 ### System Requirements

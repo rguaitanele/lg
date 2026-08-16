@@ -75,6 +75,22 @@ $_CONFIG = array
 	'routers' => array(),
 );
 
+$supported_languages = array('pt_BR', 'en');
+$language = isset($_COOKIE['lg_language']) ? $_COOKIE['lg_language'] : 'pt_BR';
+
+if (isset($_GET['lang']) AND in_array($_GET['lang'], $supported_languages, TRUE))
+{
+	$language = $_GET['lang'];
+	setcookie('lg_language', $language, time() + 31536000, '/', '', FALSE, TRUE);
+}
+
+if (!in_array($language, $supported_languages, TRUE))
+{
+	$language = 'pt_BR';
+}
+
+$translations = require __DIR__.'/lang/'.$language.'.php';
+
 @ob_end_flush();
 
 if (file_exists('lg_config.php') AND is_readable('lg_config.php'))
@@ -95,7 +111,7 @@ if ($privileged_command_denied OR $command != 'graph' OR !isset($_REQUEST['rende
 // HTML header
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<?php print $language == 'pt_BR' ? 'pt-BR' : 'en' ?>">
 	<head>
 		<!--
 			=================================================
@@ -104,44 +120,98 @@ if ($privileged_command_denied OR $command != 'graph' OR !isset($_REQUEST['rende
 			- https://github.com/hsdn/lg
 			=================================================
 		-->
-		<title>AS<?php print $_CONFIG['asn'] ?> Looking Glass</title>
+		<title>AS<?php print htmlspecialchars($_CONFIG['asn']) ?> <?php print htmlspecialchars(t('page_title')) ?></title>
 		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
 		<link rel="shortcut icon" href="favicon.ico">
 		<style type="text/css"> 
-		<!--
-			body { font: 14px normal Arial, Helvetica, sans-serif; margin: 30px 10%; color: #000; background: #fff; }
-			h2 { font-size: 24px; font-weight: normal; }
-			form { margin: 0; padding: 0 0 15px 0; }
-			p, object { margin: 0; padding: 0 0 15px 0; }
-			hr { margin: 0 0 15px 0; border: none; color: #000; background-color: #000; height: 1px; }
-			a:link, a:visited { color: <?php print $_CONFIG['color'] ?>; }
-			a:hover { color: #ccc; }
-			table { border: 0; }
-			table th { background: <?php print $_CONFIG['color'] ?>; color: #fff; white-space: nowrap; font-size: 14px; text-align: center; }
-			.form { margin: auto; text-align: left; background: #efefef; border: 5px solid #efefef; }
+			:root { --accent: <?php print htmlspecialchars($_CONFIG['color']) ?>; --text: #26313d; --muted: #647181; --border: #dce2e8; --surface: #fff; --background: #f5f7f9; }
+			* { box-sizing: border-box; }
+			body { margin: 0; color: var(--text); background: var(--background); font: 15px/1.5 Arial, Helvetica, sans-serif; }
+			a:link, a:visited { color: var(--accent); }
+			a:hover { opacity: .75; }
+			img { max-width: 100%; height: auto; }
+			.page { width: min(1080px, calc(100% - 32px)); margin: 0 auto; }
+			.site-header { padding: 24px 0 18px; background: var(--surface); border-bottom: 1px solid var(--border); }
+			.header-row { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+			.brand { display: flex; align-items: center; gap: 24px; }
+			.brand img { max-height: 84px; width: auto; }
+			h1 { margin: 0; font-size: clamp(24px, 4vw, 34px); font-weight: 600; }
+			.language-switch { display: flex; padding: 4px; gap: 4px; border: 1px solid var(--border); border-radius: 10px; background: var(--background); }
+			.language-switch a { padding: 7px 10px; border-radius: 7px; color: var(--text); text-decoration: none; font-size: 13px; }
+			.language-switch a.active { color: #fff; background: var(--accent); }
+			main { padding: 28px 0; }
+			.query-card, .result-card, .notice { padding: 24px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); box-shadow: 0 8px 28px rgba(25, 39, 52, .06); }
+			.query-grid { display: grid; grid-template-columns: minmax(220px, .9fr) minmax(280px, 1.25fr); gap: 26px; }
+			fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
+			legend, .field-label { display: block; margin: 0 0 10px; font-weight: 700; }
+			.query-options { display: grid; gap: 8px; }
+			.query-option { display: flex; align-items: center; gap: 10px; padding: 9px 11px; border: 1px solid transparent; border-radius: 9px; cursor: pointer; }
+			.query-option:hover, .query-option:has(input:checked) { border-color: var(--border); background: var(--background); }
+			.query-option input { accent-color: var(--accent); }
+			.fields { display: grid; gap: 16px; align-content: start; }
+			.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+			input[type="text"], select { width: 100%; min-height: 44px; padding: 10px 12px; color: var(--text); background: #fff; border: 1px solid #bfc9d3; border-radius: 8px; font: inherit; }
+			input:focus, select:focus { outline: 3px solid color-mix(in srgb, var(--accent) 22%, transparent); border-color: var(--accent); }
+			input:disabled { color: var(--muted); background: #eef1f4; }
+			.help { margin: -6px 0 0; color: var(--muted); font-size: 13px; }
+			.actions { display: flex; justify-content: flex-end; margin-top: 4px; }
+			.button { min-height: 44px; padding: 10px 24px; border: 0; border-radius: 9px; color: #fff; background: var(--accent); font: inherit; font-weight: 700; cursor: pointer; }
+			.button:hover { filter: brightness(.94); }
 			.center { text-align: center; }
-			.error { color: red; font-weight: bold; }
-			.warning { color: blue; font-weight: bold; }
-			.legend { font-size: 12px; margin: auto; }
-		//-->
+			.error { color: #a32121; font-weight: 700; }
+			.warning { color: #735b00; font-weight: 700; }
+			.legend { margin: auto; font-size: 12px; }
+			pre { overflow: auto; margin: 16px 0 0; padding: 20px; color: #e8edf2; background: #17212b; border-radius: 10px; }
+			object { width: 100%; min-height: 420px; }
+			.site-footer { padding: 24px 0; border-top: 1px solid var(--border); color: var(--muted); background: var(--surface); text-align: center; }
+			.site-footer p { margin: 4px 0; }
+			@media (max-width: 720px) {
+				.page { width: min(100% - 20px, 1080px); }
+				.site-header { padding-top: 16px; }
+				.header-row, .brand { align-items: flex-start; flex-direction: column; }
+				.brand { gap: 12px; }
+				.brand img { max-height: 64px; }
+				.query-grid, .field-row { grid-template-columns: 1fr; }
+				.query-card, .result-card, .notice { padding: 17px; }
+				.actions .button { width: 100%; }
+			}
 		</style>
 		<script type="text/javascript">
-		<!--
 			function load() {
 				var loading = document.getElementById('loading');
 				if (loading !== null) {
 					loading.style.display = 'none';
 				}
+				updateQueryField();
 			}
-		//-->
+			function updateQueryField() {
+				var selected = document.querySelector('input[name="command"]:checked');
+				var query = document.getElementById('query');
+				if (!selected || !query) return;
+				query.disabled = selected.value === 'summary';
+				query.required = selected.value !== 'summary';
+				query.placeholder = selected.getAttribute('data-placeholder') || '';
+				if (query.disabled) query.value = '';
+			}
 		</script>
 	</head>
 	<body onload="load();">
+		<header class="site-header">
+			<div class="page header-row">
+				<div class="brand">
 <?php if (isset($_CONFIG['logo']) AND $_CONFIG['logo']): ?>
-		<div class="center"><a href="?"><img src="<?php print $_CONFIG['logo'] ?>" border="0" alt="lg"></a></div>
+					<a href="?"><img src="<?php print htmlspecialchars($_CONFIG['logo']) ?>" alt="Looking Glass"></a>
 <?php endif ?>
-		<div class="center"><h2>AS<?php print $_CONFIG['asn'] ?> Looking Glass</h2></div>
-		<hr>
+					<h1>AS<?php print htmlspecialchars($_CONFIG['asn']) ?> Looking Glass</h1>
+				</div>
+				<nav class="language-switch" aria-label="<?php print htmlspecialchars(t('language')) ?>">
+					<a href="?lang=pt_BR"<?php print $language == 'pt_BR' ? ' class="active" aria-current="page"' : '' ?>>PT</a>
+					<a href="?lang=en"<?php print $language == 'en' ? ' class="active" aria-current="page"' : '' ?>>EN</a>
+				</nav>
+			</div>
+		</header>
+		<main class="page">
 <?php
 flush();
 }
@@ -269,9 +339,8 @@ if ($privileged_command_denied)
 	$denied_client_ip = get_client_ip();
 	error_log('LG denied privileged command "'.$command.'" from client '.$denied_client_ip);
 	http_response_code(403);
-	print '<div class="center"><p class="error">This query is restricted to authorized IP addresses. '
-		.'Detected client IP: '.htmlspecialchars($denied_client_ip, ENT_QUOTES, 'UTF-8').'.</p></div>';
-	print '<hr>';
+	print '<div class="notice center"><p class="error">'.htmlspecialchars(t('restricted')).' '
+		.htmlspecialchars(t('detected_ip')).': '.htmlspecialchars($denied_client_ip, ENT_QUOTES, 'UTF-8').'.</p></div>';
 }
 
 if (!$privileged_command_denied AND isset($_CONFIG['routers'][$router]) AND
@@ -283,8 +352,7 @@ if (!$privileged_command_denied AND isset($_CONFIG['routers'][$router]) AND
 	{
 		$protocol = 'ipv4';
 
-		print '<div class="center"><p class="warning">The router does not support IPv6. Using IPv4.</p></div>';
-		print '<hr>';
+		print '<div class="notice center"><p class="warning">'.htmlspecialchars(t('ipv6_fallback')).'</p></div>';
 	}
 
 	$url = $_CONFIG['routers'][$router]['url'];
@@ -338,7 +406,11 @@ if (!$privileged_command_denied AND isset($_CONFIG['routers'][$router]) AND
 				{
 					if ($command != 'graph')
 					{
-						print '<p>Address <b>'.$query.'</b> is converted to a subnet <b>'.$route.'</b> using the <a href="http://radb.net/" target="_blank">Merit RADb</a></p>';
+						print '<p>'.sprintf(
+							htmlspecialchars(t('radb_conversion')),
+							'<b>'.htmlspecialchars($query).'</b>',
+							'<b>'.htmlspecialchars($route).'</b>'
+						).'</p>';
 					}
 
 					$query = $route;
@@ -354,18 +426,17 @@ if (!$privileged_command_denied AND isset($_CONFIG['routers'][$router]) AND
 
 			if ($query === FALSE)
 			{
-				print '<div class="center"><p class="error">Can\'t resolve the hostname.</p></div>';
+				print '<div class="notice center"><p class="error">'.htmlspecialchars(t('cannot_resolve')).'</p></div>';
 			}
 			else
 			{
-				print '<div class="center"><p class="error">Parameter missing.</p></div>';
+				print '<div class="notice center"><p class="error">'.htmlspecialchars(t('parameter_missing')).'</p></div>';
 			}
 		}
 	}
 	else if ($query != '' AND $command != 'graph')
 	{
-		print '<div class="center"><p class="warning">No parameter needed.</p></div>';
-		print '<hr>';
+		print '<div class="notice center"><p class="warning">'.htmlspecialchars(t('parameter_not_needed')).'</p></div>';
 	}
 
 	if ($exec)
@@ -441,7 +512,7 @@ if (!$privileged_command_denied AND isset($_CONFIG['routers'][$router]) AND
 
 			if (!class_exists('Image_GraphViz'))
 			{
-				print '<div class="center"><p class="error">Class Image_GraphViz not found!</p></div>';
+				print '<div class="notice center"><p class="error">'.htmlspecialchars(t('graph_library_missing')).'</p></div>';
 			}
 			else
 			{
@@ -456,29 +527,24 @@ if (!$privileged_command_denied AND isset($_CONFIG['routers'][$router]) AND
 
 						if (sizeof($as_pathes) < 1)
 						{
-							get_blank_graph('Not found BGP information of request.', $format);
+							get_blank_graph(t('bgp_info_not_found'), $format);
 						}
 
 						get_path_graph($router, $query, $as_pathes, $as_best_path, $format);
 					}
 
-					get_blank_graph('Unable to get BGP information.', $format);
+					get_blank_graph(t('bgp_info_unavailable'), $format);
 				}
 ?>
-		<div class="center">
-			<p>BGP routing graph for <b><?php print $query ?></b>, router: <b><?php print $_CONFIG['routers'][$router]['description'] ?></b></p>
-			<p><a href="?command=bgp&amp;protocol=<?php print $protocol ?>&amp;query=<?php print $query ?>&amp;router=<?php print $router ?>">Run a bgp command on this router</a></p>
+		<div class="result-card center">
+			<p><?php print htmlspecialchars(t('graph_title')) ?> <b><?php print htmlspecialchars($query) ?></b> — <?php print htmlspecialchars(t('router')) ?>: <b><?php print htmlspecialchars($_CONFIG['routers'][$router]['description']) ?></b></p>
+			<p><a href="?command=bgp&amp;protocol=<?php print urlencode($protocol) ?>&amp;query=<?php print urlencode($query) ?>&amp;router=<?php print urlencode($router) ?>"><?php print htmlspecialchars(t('run_bgp')) ?></a></p>
 			<table border="0" class="legend">
-				<tr><td bgcolor="#CCCCFF" width="15">&nbsp;</td><td>Alternative-path neighbor AS</td><td width="80">&nbsp;</td><td bgcolor="#CCFFCC" width="15">&nbsp;</td><td>Best-path neighbor AS</td><td width="80">&nbsp;</td><td bgcolor="white"><div style="height:12px;width:37px;background-image:url('data:image/gif;base64,R0lGODlhJQAMAOcAAAQCBISChJQ2NMTCxERCRcSCTGRiZYRWNEw2HKSipOTi5CQiJWRCJORCROyiXPzClISGnFRSVXRydKyi5DQyNRQSFJSSqdwCBPTy99xqlNTS1PwiJNSGvMSm7FxGRGxijIR+fPzk5JySzPSKVLS0tCQlNFxSdCQXDERCXOTC3LS21Dw6PSwCBNQeHAwKDPxSLHxyo+x2hNTS9MTG5KRyROzs7JSGwRwaHeyitPzU1KSivGxsbGRagVxaXXx8fLSq8ZycnPw0NOSaXLyCTExKTrxqbHwiJPylpDQzRPz+/GxuhCwqN4yOjJRkPEQ+WeTk/CwsLPRCTKSa3PwUFBQOCtza/Py0tNSPVGxKLIyKn1RVZBQWHPwDBPz09PxkZPybnIR3rFxcbExKZPzExDw6VPx8fNzO/KyqxJyatPQeLBQCBMzMzERGVGRldFw+JDQiFHRyhNzb3PQqPPTu/PyEhLy8vLyy/AwNFPxVVMzK6pSOxBweLOza7Lyq9HxunDQuQfxMTLwmJPzavPyUlMyb3JxaXLx+TFRKbCQeLOxufKysrPSuvORKZMSy/OTO7Hx+lPwKDIyCt/x0dPzc3Pw8PPysrPy8vPxsbPzNzPyMjPxaXIyKjMyOzHRqlcyKVCweFLy+3JSWlNyWW4R+tJxqPMTC3LSyzFw6PPwaHPwsLPzs7AwGBFQ5JGxGLPSiYLSi5hwSDKSV1ExCXLy61tzW/Dw1TJSSlOzi9PxERKya3BwWJMQqLISClNTW5CwmNKx2ROzs/PSmtGxsfHx7jJyarOyeXJxmPHRNLFxafExKbJyOzIx+fPR2hIx+tAQGBERGRWRmZOTm5CQmJWRGLPzGnFRWVDQ2NZSWrPT298Sq9GxmjlxWeTw+PQwODNTW9pSKxBweHaSmvWRehFxeXExOTCwuNNze/IyOpExOXDw+TKyuypyetXR2iMzO7Lyu+FROcPwODHRunPweHfSmZLSm7ExGZOzm/Kye44SGhMTGxIRaNKSmpHR2dBQWFNTW1PwmJCwAAAAAJQAMAAAIagCTCBxIsKBBVQYTKlxo8AsXL5YYSpzokAuXKZIwTdxYsKJFi/LK5OC40ePHj6kyhRh4pKXLlzBjXjpJ82OQRElq6tw5ZWfNKCQb+rQYZFDQhCZPpqIz6ajCpCFHOl1YccqlMVMnHoG4MSAAOw==')"></div></td><td>Best route</td></tr>
+				<tr><td bgcolor="#CCCCFF" width="15">&nbsp;</td><td><?php print htmlspecialchars(t('alternative_path')) ?></td><td width="40">&nbsp;</td><td bgcolor="#CCFFCC" width="15">&nbsp;</td><td><?php print htmlspecialchars(t('best_path')) ?></td><td width="40">&nbsp;</td><td bgcolor="white"><div style="height:12px;width:37px;background-image:url('data:image/gif;base64,R0lGODlhJQAMAOcAAAQCBISChJQ2NMTCxERCRcSCTGRiZYRWNEw2HKSipOTi5CQiJWRCJORCROyiXPzClISGnFRSVXRydKyi5DQyNRQSFJSSqdwCBPTy99xqlNTS1PwiJNSGvMSm7FxGRGxijIR+fPzk5JySzPSKVLS0tCQlNFxSdCQXDERCXOTC3LS21Dw6PSwCBNQeHAwKDPxSLHxyo+x2hNTS9MTG5KRyROzs7JSGwRwaHeyitPzU1KSivGxsbGRagVxaXXx8fLSq8ZycnPw0NOSaXLyCTExKTrxqbHwiJPylpDQzRPz+/GxuhCwqN4yOjJRkPEQ+WeTk/CwsLPRCTKSa3PwUFBQOCtza/Py0tNSPVGxKLIyKn1RVZBQWHPwDBPz09PxkZPybnIR3rFxcbExKZPzExDw6VPx8fNzO/KyqxJyatPQeLBQCBMzMzERGVGRldFw+JDQiFHRyhNzb3PQqPPTu/PyEhLy8vLyy/AwNFPxVVMzK6pSOxBweLOza7Lyq9HxunDQuQfxMTLwmJPzavPyUlMyb3JxaXLx+TFRKbCQeLOxufKysrPSuvORKZMSy/OTO7Hx+lPwKDIyCt/x0dPzc3Pw8PPysrPy8vPxsbPzNzPyMjPxaXIyKjMyOzHRqlcyKVCweFLy+3JSWlNyWW4R+tJxqPMTC3LSyzFw6PPwaHPwsLPzs7AwGBFQ5JGxGLPSiYLSi5hwSDKSV1ExCXLy61tzW/Dw1TJSSlOzi9PxERKya3BwWJMQqLISClNTW5CwmNKx2ROzs/PSmtGxsfHx7jJyarOyeXJxmPHRNLFxafExKbJyOzIx+fPR2hIx+tAQGBERGRWRmZOTm5CQmJWRGLPzGnFRWVDQ2NZSWrPT298Sq9GxmjlxWeTw+PQwODNTW9pSKxBweHaSmvWRehFxeXExOTCwuNNze/IyOpExOXDw+TKyuypyetXR2iMzO7Lyu+FROcPwODHRunPweHfSmZLSm7ExGZOzm/Kye44SGhMTGxIRaNKSmpHR2dBQWFNTW1PwmJCwAAAAAJQAMAAAIagCTCBxIsKBBVQYTKlxo8AsXL5YYSpzokAuXKZIwTdxYsKJFi/LK5OC40ePHj6kyhRh4pKXLlzBjXjpJ82OQRElq6tw5ZWfNKCQb+rQYZFDQhCZPpqIz6ajCpCFHOl1YccqlMVMnHoG4MSAAOw==')"></div></td><td><?php print htmlspecialchars(t('best_route')) ?></td></tr>
 			</table>
 			<br>
-			<div id="loading" style="display:inline"><p><b>Please wait...</b></p></div>
-			<!--[if IE]>
-				<p><img src="?command=graph&amp;protocol=<?php print $protocol ?>&amp;query=<?php print $query ?>&amp;router=<?php print $router ?>&amp;render=png" alt="" title=""></p>
-			<![endif]-->
-			<![if ! IE]>
-				<object data="?command=graph&amp;protocol=<?php print $protocol ?>&amp;query=<?php print $query ?>&amp;router=<?php print $router ?>&amp;render=true" type="image/svg+xml"></object>
-			<![endif]>
+			<div id="loading" style="display:inline"><p><b><?php print htmlspecialchars(t('please_wait')) ?></b></p></div>
+			<object data="?command=graph&amp;protocol=<?php print urlencode($protocol) ?>&amp;query=<?php print urlencode($query) ?>&amp;router=<?php print urlencode($router) ?>&amp;render=true" type="image/svg+xml"></object>
 			<br>
 		</div>
 <?php
@@ -488,70 +554,92 @@ if (!$privileged_command_denied AND isset($_CONFIG['routers'][$router]) AND
 		}
 		else
 		{
-			print '<p><b>Router:</b> '.$_CONFIG['routers'][$router]['description'].'<br><b>Command:</b> '.$exec.'</p><pre><code>';
+			print '<div class="result-card"><p><b>'.htmlspecialchars(t('router')).':</b> '.htmlspecialchars($_CONFIG['routers'][$router]['description']).'<br><b>'.htmlspecialchars(t('command')).':</b> '.htmlspecialchars($exec).'</p><pre><code>';
 			flush();
 
 			process($url, $exec);
 
-			print '</code></pre>';
+			print '</code></pre></div>';
 		}
 	}
 }
 else
 {
 	$routers = group_routers($_CONFIG['routers']);
+	$selected_command = $command ? $command : 'bgp';
+	$visible_commands = is_privileged_client()
+		? array('bgp', 'advertised-routes', 'summary', 'graph', 'trace', 'ping')
+		: array('bgp', 'trace', 'ping');
+
+	if (!in_array($selected_command, $visible_commands, TRUE))
+	{
+		$selected_command = 'bgp';
+	}
 
 // HTML form
 ?>
-		<form method="get" action="">
-		<div class="center">
-			<table class="form" cellpadding="2" cellspacing="2">
-				<tr><th>Type of Query</th><th>Additional parameters</th><th>Node</th></tr>
-				<tr><td>
-				<table border="0" cellpadding="2" cellspacing="2">
-					<tr><td><input type="radio" name="command" id="bgp" value="bgp" checked="checked"></td><td><label for="bgp">bgp route</label></td></tr>
+		<form method="get" action="" class="query-card">
+			<div class="query-grid">
+				<fieldset>
+					<legend><?php print htmlspecialchars(t('query_type')) ?></legend>
+					<div class="query-options">
+						<label class="query-option"><input type="radio" name="command" value="bgp" data-placeholder="<?php print htmlspecialchars(t('placeholder_route')) ?>" onchange="updateQueryField()"<?php print $selected_command == 'bgp' ? ' checked' : '' ?>> <span><?php print htmlspecialchars(t('bgp_route')) ?></span></label>
 <?php if (is_privileged_client()): ?>
-					<tr><td><input type="radio" name="command" id="advertised-routes" value="advertised-routes"></td><td><label for="advertised-routes">bgp&nbsp;advertised-routes</label></td></tr>
-					<tr><td><input type="radio" name="command" id="summary" value="summary"></td><td><label for="summary">bgp&nbsp;summary</label></td></tr>
-					<tr><td><input type="radio" name="command" id="graph" value="graph"></td><td><label for="graph">bgp graph</label></td></tr>
+						<label class="query-option"><input type="radio" name="command" value="advertised-routes" data-placeholder="<?php print htmlspecialchars(t('placeholder_peer')) ?>" onchange="updateQueryField()"<?php print $selected_command == 'advertised-routes' ? ' checked' : '' ?>> <span><?php print htmlspecialchars(t('advertised_routes')) ?></span></label>
+						<label class="query-option"><input type="radio" name="command" value="summary" data-placeholder="<?php print htmlspecialchars(t('placeholder_none')) ?>" onchange="updateQueryField()"<?php print $selected_command == 'summary' ? ' checked' : '' ?>> <span><?php print htmlspecialchars(t('bgp_summary')) ?></span></label>
+						<label class="query-option"><input type="radio" name="command" value="graph" data-placeholder="<?php print htmlspecialchars(t('placeholder_route')) ?>" onchange="updateQueryField()"<?php print $selected_command == 'graph' ? ' checked' : '' ?>> <span><?php print htmlspecialchars(t('bgp_graph')) ?></span></label>
 <?php endif ?>
-					<tr><td><input type="radio" name="command" id="trace" value="trace"></td><td><label for="trace">traceroute</label></td></tr>
-					<tr><td><input type="radio" name="command" id="ping" value="ping"></td><td><label for="ping">ping</label></td></tr>
-					<tr><td></td><td style="padding-top:10px">
-					<select name="protocol">
-						<option value="ipv4">IPv4</option>
-						<option value="ipv6">IPv6</option>
-					</select></td></tr>
-				</table></td>
-				<td align="center"><input name="query" size="30"></td>
-				<td align="right">
-				<select name="router" style="min-width: 180px">
+						<label class="query-option"><input type="radio" name="command" value="trace" data-placeholder="<?php print htmlspecialchars(t('placeholder_host')) ?>" onchange="updateQueryField()"<?php print $selected_command == 'trace' ? ' checked' : '' ?>> <span><?php print htmlspecialchars(t('traceroute')) ?></span></label>
+						<label class="query-option"><input type="radio" name="command" value="ping" data-placeholder="<?php print htmlspecialchars(t('placeholder_host')) ?>" onchange="updateQueryField()"<?php print $selected_command == 'ping' ? ' checked' : '' ?>> <span><?php print htmlspecialchars(t('ping')) ?></span></label>
+					</div>
+				</fieldset>
+				<div class="fields">
+					<div>
+						<label class="field-label" for="query"><?php print htmlspecialchars(t('query')) ?></label>
+						<input type="text" id="query" name="query" value="<?php print htmlspecialchars($query !== FALSE ? $query : '') ?>">
+						<p class="help"><?php print htmlspecialchars(t('query_help')) ?></p>
+					</div>
+					<div class="field-row">
+						<div>
+							<label class="field-label" for="protocol"><?php print htmlspecialchars(t('protocol')) ?></label>
+							<select id="protocol" name="protocol">
+								<option value="ipv4"<?php print $protocol == 'ipv6' ? '' : ' selected' ?>>IPv4</option>
+								<option value="ipv6"<?php print $protocol == 'ipv6' ? ' selected' : '' ?>>IPv6</option>
+							</select>
+						</div>
+						<div>
+							<label class="field-label" for="router"><?php print htmlspecialchars(t('router')) ?></label>
+							<select id="router" name="router">
 <?php foreach ($routers as $group => $group_data): ?>
 <?php if ($group != ''): ?>
 					<optgroup label="<?php print htmlspecialchars($group) ?>">
 <?php endif ?>
 <?php foreach ($group_data as $router_id => $router_data): ?>
-					<option value="<?php print $router_id ?>"><?php print htmlspecialchars($router_data['description']) ?></option>
+								<option value="<?php print htmlspecialchars($router_id) ?>"<?php print $router === $router_id ? ' selected' : '' ?>><?php print htmlspecialchars($router_data['description']) ?></option>
 <?php endforeach ?>
 <?php if ($group != ''): ?>
 					</optgroup>
 <?php endif ?>
 <?php endforeach ?>
-				</select></td></tr>
-				<tr><td align="center" colspan="3"><p><input type="submit" value="Submit"> | <input type="reset" value="Reset"></p></td></tr>
-			</table>
-		</div>
+							</select>
+						</div>
+					</div>
+					<div class="actions"><button class="button" type="submit"><?php print htmlspecialchars(t('consult')) ?></button></div>
+				</div>
+			</div>
 		</form>
 <?php
 }
 
 // HTML footer
 ?>
-		<hr>
-		<div class="center">
-			<p><small>Information: <a href="https://stat.ripe.net/AS<?php print $_CONFIG['asn'] ?>" target="_blank">RIPEstat</a> <a href="http://bgp.he.net/AS<?php print $_CONFIG['asn'] ?>" target="_blank">he.net</a> <a href="https://www.robtex.com/as/AS<?php print $_CONFIG['asn'] ?>.html" target="_blank">robtex.com</a> <a href="http://www.peeringdb.com/view.php?asn=<?php print $_CONFIG['asn'] ?>" target="_blank">PeeringDB</a></small></p>
-			<p>Copyright &copy; <?php print date('Y') ?> <?php print htmlspecialchars($_CONFIG['company']) ?></p>
-		</div>
+		</main>
+		<footer class="site-footer">
+			<div class="page">
+				<p><small><?php print htmlspecialchars(t('information')) ?>: <a href="https://stat.ripe.net/AS<?php print urlencode($_CONFIG['asn']) ?>" target="_blank" rel="noopener noreferrer">RIPEstat</a> · <a href="https://bgp.he.net/AS<?php print urlencode($_CONFIG['asn']) ?>" target="_blank" rel="noopener noreferrer">HE BGP Toolkit</a> · <a href="https://www.peeringdb.com/asn/<?php print urlencode($_CONFIG['asn']) ?>" target="_blank" rel="noopener noreferrer">PeeringDB</a></small></p>
+				<p>&copy; <?php print date('Y') ?> <?php print htmlspecialchars($_CONFIG['company']) ?></p>
+			</div>
+		</footer>
 	</body>
 </html>
 <?php
@@ -727,7 +815,7 @@ function process($url, $exec, $return_buffer = FALSE)
 					{
 						if (!$return_buffer)
 						{
-							print '<p class="error">Command aborted.</p>';
+							print '<p class="error">'.htmlspecialchars(t('command_aborted')).'</p>';
 						}
 
 						break;
@@ -753,13 +841,13 @@ function process($url, $exec, $return_buffer = FALSE)
 
 				if (($process_status == 124 OR $process_status == 137) AND !$return_buffer)
 				{
-					print '<p class="error">Command timed out after '.$timeout.' seconds.</p>';
+					print '<p class="error">'.htmlspecialchars(sprintf(t('command_timeout'), $timeout)).'</p>';
 				}
 			}
 
 			if (empty($lines) AND !$line)
 			{
-				print '<p class="error">Command failed.</p>';
+				print '<p class="error">'.htmlspecialchars(t('command_failed')).'</p>';
 			}
 
 			break;
@@ -888,7 +976,7 @@ function process($url, $exec, $return_buffer = FALSE)
 							{
 								if (!$return_buffer)
 								{
-									print '<p class="error">Command aborted.</p>';
+									print '<p class="error">'.htmlspecialchars(t('command_aborted')).'</p>';
 								}
 
 								$telnet->disconnect();
@@ -918,7 +1006,7 @@ function process($url, $exec, $return_buffer = FALSE)
 
 				if (empty($lines) AND !$line)
 				{
-					print '<p class="error">Command failed.</p>';
+					print '<p class="error">'.htmlspecialchars(t('command_failed')).'</p>';
 				}
 			}
 			catch (Exception $exception) 
@@ -927,7 +1015,7 @@ function process($url, $exec, $return_buffer = FALSE)
 
 				if (!$return_buffer)
 				{
-					print '<p class="error">Telnet error: '.$exception->getMessage().'</p>';
+					print '<p class="error">'.htmlspecialchars(sprintf(t('telnet_error'), $exception->getMessage())).'</p>';
 				}
 			}
 
@@ -995,6 +1083,16 @@ function is_privileged_command($command)
 		array('advertised-routes', 'received-routes', 'routes', 'summary', 'graph'),
 		TRUE
 	);
+}
+
+/**
+ * Return a translated interface string.
+ */
+function t($key)
+{
+	global $translations;
+
+	return isset($translations[$key]) ? $translations[$key] : $key;
 }
 
 /**
@@ -1121,7 +1219,7 @@ function parse_out($output, $check = FALSE)
 
 		if (!isset($output_parts[($protocol != 'ipv6' ? 3 : 2)]))
 		{
-			return 'Records for '.strip_tags($query).' is not found';
+			return htmlspecialchars(sprintf(t('records_not_found'), strip_tags($query)));
 		}
 
 		$summary_parts = explode("\n\n" , $output_parts[($protocol != 'ipv6' ? 3 : 2)]);
@@ -1189,7 +1287,7 @@ function parse_out($output, $check = FALSE)
 
 		if (!isset($output_parts[1]))
 		{
-			return 'Records for '.strip_tags($query).' is not found';
+			return htmlspecialchars(sprintf(t('records_not_found'), strip_tags($query)));
 		}
 
 		$summary_parts = explode("\n\n" , $output_parts[1]);
@@ -1408,7 +1506,7 @@ function parse_out($output, $check = FALSE)
 	// Other OS parsers
 	if (preg_match('/^show bgp ipv6 unicast/i', $exec)  AND $os = 'ios') 
 	{
-		$output = str_replace('% Incomplete command.', '<p class="error">Please use network prefix in Parameter.</p>', $output);
+		$output = str_replace('% Incomplete command.', '<p class="error">'.htmlspecialchars(t('use_network_prefix')).'</p>', $output);
 	}
 
 	if ($exec == 'show ip bgp summary')

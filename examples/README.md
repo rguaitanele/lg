@@ -159,6 +159,7 @@ Para visitantes fora da lista, ficam disponíveis somente `bgp route`, `ping` e
 `received-routes` e `routes` são ocultadas e tentativas de montar a URL
 manualmente recebem HTTP 403 antes de abrir uma sessão no roteador.
 
-A verificação usa apenas `REMOTE_ADDR`; ela não confia em `X-Forwarded-For`. Se
-o LG estiver atrás de um proxy reverso, configure o `mod_remoteip` somente com
-os endereços dos proxies confiáveis antes de usar essa lista.
+A aplicação aceita `X-Forwarded-For` somente quando a conexão veio das redes
+privadas normalmente usadas pelo Docker e por redes locais. Não publique a
+porta do container diretamente na internet quando o acesso for feito por um
+proxy reverso.

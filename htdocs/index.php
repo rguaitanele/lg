@@ -1028,7 +1028,25 @@ function is_privileged_client()
  */
 function get_client_ip()
 {
-	return isset($_SERVER['REMOTE_ADDR']) ? trim($_SERVER['REMOTE_ADDR']) : 'unknown';
+	$remote_ip = isset($_SERVER['REMOTE_ADDR']) ? trim($_SERVER['REMOTE_ADDR']) : 'unknown';
+	$trusted_proxy_networks = array('10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16');
+
+	foreach ($trusted_proxy_networks as $network)
+	{
+		if (ip_matches_rule($remote_ip, $network)
+			AND !empty($_SERVER['HTTP_X_FORWARDED_FOR']))
+		{
+			$forwarded_ips = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
+			$client_ip = trim($forwarded_ips[0]);
+
+			if (filter_var($client_ip, FILTER_VALIDATE_IP) !== FALSE)
+			{
+				return $client_ip;
+			}
+		}
+	}
+
+	return $remote_ip;
 }
 
 /**

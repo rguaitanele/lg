@@ -16,10 +16,8 @@ LABEL org.opencontainers.image.title="HSDN PHP Looking Glass" \
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends bash ssh openssl libgmp-dev libgmp3-dev sshpass graphviz \
-    && pear install Image_GraphViz-1.3.0 \
     && ln -s /usr/include/x86_64-linux-gnu/gmp.h /usr/include/gmp.h \
     && docker-php-ext-install -j$(nproc) gmp \
-    && a2enmod remoteip \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir -p /var/log/ /var/www/.ssh \
     && touch /var/log/looking-glass.log \
@@ -28,6 +26,10 @@ RUN apt-get update \
     && chown -R www-data:www-data /var/www/.ssh \
     && chmod 700 /var/www/.ssh \
     && chmod 600 /var/www/.ssh/known_hosts
+
+# The PEAR channel is unreliable; pin the official library source by commit.
+ADD https://raw.githubusercontent.com/pear/Image_GraphViz/7830ac2772ec2701cff073874981905c62a5722b/Image/GraphViz.php /usr/local/lib/php/Image/GraphViz.php
+RUN chmod 644 /usr/local/lib/php/Image/GraphViz.php
 
 COPY htdocs/ /var/www/html/
 

@@ -10,6 +10,7 @@ return array(
 	'router' => 'Router',
 	'protocol' => 'Protocol',
 	'consult' => 'Run query',
+	'new_query' => 'New query',
 	'bgp_route' => 'BGP route',
 	'advertised_routes' => 'Advertised routes',
 	'bgp_summary' => 'BGP status',

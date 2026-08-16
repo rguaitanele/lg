@@ -154,10 +154,13 @@ if ($privileged_command_denied OR $command != 'graph' OR !isset($_REQUEST['rende
 			input[type="text"], select { width: 100%; min-height: 44px; padding: 10px 12px; color: var(--text); background: #fff; border: 1px solid #bfc9d3; border-radius: 8px; font: inherit; }
 			input:focus, select:focus { outline: 3px solid color-mix(in srgb, var(--accent) 22%, transparent); border-color: var(--accent); }
 			input:disabled { color: var(--muted); background: #eef1f4; }
-			.help { margin: -6px 0 0; color: var(--muted); font-size: 13px; }
+			.help { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
 			.actions { display: flex; justify-content: flex-end; margin-top: 4px; }
 			.button { min-height: 44px; padding: 10px 24px; border: 0; border-radius: 9px; color: #fff; background: var(--accent); font: inherit; font-weight: 700; cursor: pointer; }
 			.button:hover { filter: brightness(.94); }
+			.result-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+			.result-header p { margin: 0; }
+			.secondary-button { display: inline-block; flex: 0 0 auto; padding: 8px 14px; border: 1px solid var(--border); border-radius: 8px; color: var(--text) !important; background: var(--background); text-decoration: none; font-weight: 700; }
 			.center { text-align: center; }
 			.error { color: #a32121; font-weight: 700; }
 			.warning { color: #735b00; font-weight: 700; }
@@ -169,7 +172,7 @@ if ($privileged_command_denied OR $command != 'graph' OR !isset($_REQUEST['rende
 			@media (max-width: 720px) {
 				.page { width: min(100% - 20px, 1080px); }
 				.site-header { padding-top: 16px; }
-				.header-row, .brand { align-items: flex-start; flex-direction: column; }
+				.header-row, .brand, .result-header { align-items: flex-start; flex-direction: column; }
 				.brand { gap: 12px; }
 				.brand img { max-height: 64px; }
 				.query-grid, .field-row { grid-template-columns: 1fr; }
@@ -188,9 +191,11 @@ if ($privileged_command_denied OR $command != 'graph' OR !isset($_REQUEST['rende
 			function updateQueryField() {
 				var selected = document.querySelector('input[name="command"]:checked');
 				var query = document.getElementById('query');
+				var queryField = document.getElementById('query-field');
 				if (!selected || !query) return;
 				query.disabled = selected.value === 'summary';
 				query.required = selected.value !== 'summary';
+				if (queryField) queryField.style.display = query.disabled ? 'none' : 'block';
 				query.placeholder = selected.getAttribute('data-placeholder') || '';
 				if (query.disabled) query.value = '';
 			}
@@ -554,7 +559,7 @@ if (!$privileged_command_denied AND isset($_CONFIG['routers'][$router]) AND
 		}
 		else
 		{
-			print '<div class="result-card"><p><b>'.htmlspecialchars(t('router')).':</b> '.htmlspecialchars($_CONFIG['routers'][$router]['description']).'<br><b>'.htmlspecialchars(t('command')).':</b> '.htmlspecialchars($exec).'</p><pre><code>';
+			print '<div class="result-card"><div class="result-header"><p><b>'.htmlspecialchars(t('router')).':</b> '.htmlspecialchars($_CONFIG['routers'][$router]['description']).'<br><b>'.htmlspecialchars(t('command')).':</b> '.htmlspecialchars($exec).'</p><a class="secondary-button" href="?">'.htmlspecialchars(t('new_query')).'</a></div><pre><code>';
 			flush();
 
 			process($url, $exec);
@@ -594,7 +599,7 @@ else
 					</div>
 				</fieldset>
 				<div class="fields">
-					<div>
+					<div id="query-field">
 						<label class="field-label" for="query"><?php print htmlspecialchars(t('query')) ?></label>
 						<input type="text" id="query" name="query" value="<?php print htmlspecialchars($query !== FALSE ? $query : '') ?>">
 						<p class="help"><?php print htmlspecialchars(t('query_help')) ?></p>

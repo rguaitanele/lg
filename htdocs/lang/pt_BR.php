@@ -10,6 +10,7 @@ return array(
 	'router' => 'Roteador',
 	'protocol' => 'Protocolo',
 	'consult' => 'Consultar',
+	'new_query' => 'Nova consulta',
 	'bgp_route' => 'Rota BGP',
 	'advertised_routes' => 'Rotas anunciadas',
 	'bgp_summary' => 'Status BGP',

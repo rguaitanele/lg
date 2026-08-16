@@ -38,11 +38,6 @@ aaa
  quit
 ```
 
-O VRP pode exigir uma senha para criar o objeto AAA mesmo que o SSH seja
-configurado depois com autenticação exclusivamente RSA. Digite-a de forma
-interativa para não deixá-la no histórico ou na documentação. Não configure
-`password-rsa`: o modo usado neste exemplo continua sendo somente `rsa`.
-
 ## 3. Importar e vincular a chave RSA
 
 Use um nome identificável para a chave:
@@ -58,16 +53,6 @@ ssh user lookingglass authentication-type rsa
 ssh user lookingglass assign rsa-key LG_LOOKINGGLASS
 ssh user lookingglass service-type stelnet
 ```
-
-No NE8000 validado neste projeto, `service-type stelnet` é obrigatório. Sem ele,
-o equipamento pode aceitar a conexão TCP na porta 22 e encerrar a sessão antes
-de concluir a negociação SSH.
-
-Não confunda as duas configurações:
-
-- `stelnet server enable` habilita globalmente o terminal SSH no equipamento.
-- `ssh user lookingglass service-type stelnet` autoriza esse usuário a utilizar
-  o terminal SSH.
 
 ## 4. Conferir a VTY e o servidor SSH
 

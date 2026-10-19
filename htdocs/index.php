@@ -106,6 +106,14 @@ $router = isset($_REQUEST['router']) ? trim($_REQUEST['router']) : FALSE;
 $protocol = isset($_REQUEST['protocol']) ? trim($_REQUEST['protocol']) : FALSE;
 $command = isset($_REQUEST['command']) ? trim($_REQUEST['command']) : FALSE;
 $query = isset($_REQUEST['query']) ? trim($_REQUEST['query']) : FALSE;
+$form_command = $command;
+
+// Return to the populated form without running the previous query again.
+if (isset($_GET['new_query']))
+{
+	$command = FALSE;
+}
+
 $privileged_command_denied = is_privileged_command($command) && !is_privileged_client();
 $peer_suggestions = is_privileged_client() ? peer_inventory_suggestions() : array();
 $peer_suggestions_json = json_encode(
@@ -612,7 +620,7 @@ if (!$privileged_command_denied AND isset($_CONFIG['routers'][$router]) AND
 		<div class="result-card center">
 			<div class="result-header">
 				<p><?php print htmlspecialchars(t('graph_title')) ?> <b><?php print htmlspecialchars($query) ?></b> — <?php print htmlspecialchars(t('router')) ?>: <b><?php print htmlspecialchars($_CONFIG['routers'][$router]['description']) ?></b></p>
-				<a class="secondary-button" href="?router=<?php print urlencode($router) ?>&amp;protocol=<?php print urlencode($protocol) ?>"><?php print htmlspecialchars(t('new_query')) ?></a>
+				<a class="secondary-button" href="?new_query=1&amp;command=<?php print urlencode($form_command) ?>&amp;router=<?php print urlencode($router) ?>&amp;protocol=<?php print urlencode($protocol) ?>&amp;query=<?php print urlencode($query) ?>"><?php print htmlspecialchars(t('new_query')) ?></a>
 			</div>
 			<p><a href="?command=bgp&amp;protocol=<?php print urlencode($protocol) ?>&amp;query=<?php print urlencode($query) ?>&amp;router=<?php print urlencode($router) ?>"><?php print htmlspecialchars(t('run_bgp')) ?></a></p>
 			<table border="0" class="legend">
@@ -630,7 +638,7 @@ if (!$privileged_command_denied AND isset($_CONFIG['routers'][$router]) AND
 		}
 		else
 		{
-			print '<div class="result-card"><div class="result-header"><p><b>'.htmlspecialchars(t('router')).':</b> '.htmlspecialchars($_CONFIG['routers'][$router]['description']).'<br><b>'.htmlspecialchars(t('command')).':</b> '.htmlspecialchars($exec).'</p><a class="secondary-button" href="?router='.urlencode($router).'&amp;protocol='.urlencode($protocol).'">'.htmlspecialchars(t('new_query')).'</a></div><pre><code>';
+			print '<div class="result-card"><div class="result-header"><p><b>'.htmlspecialchars(t('router')).':</b> '.htmlspecialchars($_CONFIG['routers'][$router]['description']).'<br><b>'.htmlspecialchars(t('command')).':</b> '.htmlspecialchars($exec).'</p><a class="secondary-button" href="?new_query=1&amp;command='.urlencode($form_command).'&amp;router='.urlencode($router).'&amp;protocol='.urlencode($protocol).'&amp;query='.urlencode($query).'">'.htmlspecialchars(t('new_query')).'</a></div><pre><code>';
 			flush();
 
 			process($url, $exec);
@@ -642,7 +650,7 @@ if (!$privileged_command_denied AND isset($_CONFIG['routers'][$router]) AND
 else
 {
 	$routers = group_routers($_CONFIG['routers']);
-	$selected_command = $command ? $command : 'bgp';
+	$selected_command = $form_command ? $form_command : 'bgp';
 	$visible_commands = is_privileged_client()
 		? array('bgp', 'advertised-routes', 'received-routes', 'summary', 'graph', 'trace', 'ping')
 		: array('bgp', 'trace', 'ping');
@@ -829,6 +837,13 @@ function process($url, $exec, $return_buffer = FALSE)
                     break;
             }
 
+			if ($os == 'huawei')
+			{
+				$params[] = ($sshauthtype == 'password' AND $_CONFIG['sshpwdcommand'] == 'plink')
+					? '-t'
+					: '-tt';
+			}
+
 			$params[] = $url['host'];
 
 			$exec = escapeshellcmd($exec)."\n";
@@ -864,14 +879,17 @@ function process($url, $exec, $return_buffer = FALSE)
 				$exec .= "\n";
 			}
 
-			// Huawei disable screen breaks (issue #21) -- needs more tests
-			/*if ($os == 'huawei')
-			{
-				@shell_exec('echo n | '.$ssh_path.' '.implode(' ', $params).' screen-length 0 temporary');
-			}*/
-
 			$timeout = get_command_timeout($command);
-			$shell_command = 'echo n | '.$ssh_path.' '.implode(' ', $params).' '.$exec;
+			if ($os == 'huawei')
+			{
+				$huawei_input = "screen-length 0 temporary\n".$exec."quit\n";
+				$shell_command = 'printf %s '.escapeshellarg($huawei_input)
+					.' | '.$ssh_path.' '.implode(' ', $params);
+			}
+			else
+			{
+				$shell_command = 'echo n | '.$ssh_path.' '.implode(' ', $params).' '.$exec;
+			}
 			$timed_command = '/usr/bin/timeout --signal=TERM --kill-after=5s '
 				.$timeout.'s sh -c '.escapeshellarg($shell_command);
 

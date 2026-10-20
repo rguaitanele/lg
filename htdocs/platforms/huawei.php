@@ -46,6 +46,17 @@ function huawei_should_ignore_output_line($output)
 }
 
 /**
+ * Detect the generic authorization error returned by Huawei VRP.
+ */
+function huawei_is_permission_error($output)
+{
+	return preg_match(
+		'/^\s*Error:\s+Do not have permission to run the command or the command is incomplete\.\s*$/i',
+		$output
+	);
+}
+
+/**
  * Enrich Huawei BGP peer output with AS, IP and received-route links.
  * Returns NULL when the current command is handled by the generic parser.
  */

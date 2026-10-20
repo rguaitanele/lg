@@ -744,6 +744,7 @@ function process($url, $exec, $return_buffer = FALSE)
 	$buffer = '';
 	$raw_output = '';
 	$lines = $line = $is_exception = FALSE;
+	$huawei_permission_reported = FALSE;
 	$index = 0;
 	$str_in = array();
 
@@ -905,6 +906,26 @@ function process($url, $exec, $return_buffer = FALSE)
 					if ($os == 'huawei' AND huawei_should_ignore_output_line($output))
 					{
 						continue;
+					}
+
+					if ($os == 'huawei' AND huawei_is_permission_error($output))
+					{
+						error_log(
+							'LG Huawei permission denied: router='.$router
+							.' command='.$command
+							.' device_message='.trim($output)
+						);
+
+						if (!$return_buffer)
+						{
+							if ($huawei_permission_reported)
+							{
+								continue;
+							}
+
+							$output = t('huawei_permission_denied')."\n";
+							$huawei_permission_reported = TRUE;
+						}
 					}
 
 					$raw_output .= $output;

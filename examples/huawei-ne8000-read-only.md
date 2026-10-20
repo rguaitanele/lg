@@ -119,6 +119,10 @@ Essa mensagem é normal: a paginação foi desativada apenas na sessão atual e 
 houve alteração permanente na configuração do equipamento. O Looking Glass
 remove essa linha informativa da saída exibida ao usuário.
 
+Se o roteador negar o `screen-length` ou o comando da consulta, a interface
+mostrará uma mensagem de permissão mais clara. O texto original do equipamento
+continuará registrado no log do container para diagnóstico.
+
 Confirme também que comandos de alteração são recusados. Não tente uma mudança
 real; apenas verifique que o usuário não consegue entrar em modo de sistema:
 

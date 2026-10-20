@@ -37,6 +37,7 @@ function huawei_should_ignore_output_line($output)
 {
 	return preg_match('/^\s*User Authentication\s*$/i', $output)
 		OR preg_match('/^\s*Info:\s+The max number of VTY users\b/i', $output)
+		OR preg_match('/^\s*Info:\s+The configuration takes effect on the current user terminal interface only\.\s*$/i', $output)
 		OR preg_match('/^\s*The current login time is\b/i', $output)
 		OR preg_match('/^\s*(?:<[^>]+>|\[[^\]]+\])?\s*screen-length\s+0\s+temporary\s*$/i', $output)
 		OR preg_match('/^\s*(?:<[^>]+>|\[[^\]]+\])?\s*quit\s*$/i', $output)

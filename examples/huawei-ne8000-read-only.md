@@ -38,6 +38,19 @@ aaa
  quit
 ```
 
+O Looking Glass desativa a paginação antes de executar cada consulta usando
+`screen-length 0 temporary`. Em algumas versões do VRP, esse comando não está
+disponível para usuários de nível 1 por padrão. Libere somente esse comando, sem
+aumentar o nível geral do usuário:
+
+```text
+command-privilege level 1 view shell screen-length
+```
+
+Essa configuração altera o nível do comando para todos os usuários de nível 1.
+Ela é preferível a elevar o `lookingglass` para os níveis 2 ou 3, que concedem
+permissões mais amplas.
+
 ## 3. Importar e vincular a chave RSA
 
 Use um nome identificável para a chave:
@@ -89,11 +102,22 @@ ssh -i keys/id_rsa -o IdentitiesOnly=yes lookingglass@IP_DO_NE8000
 Teste os comandos usados pelo LG:
 
 ```text
+screen-length 0 temporary
 display bgp routing-table
 display bgp peer
 ping IP_DE_TESTE
 tracert IP_DE_TESTE
 ```
+
+Ao executar `screen-length 0 temporary`, o equipamento pode responder:
+
+```text
+Info: The configuration takes effect on the current user terminal interface only.
+```
+
+Essa mensagem é normal: a paginação foi desativada apenas na sessão atual e não
+houve alteração permanente na configuração do equipamento. O Looking Glass
+remove essa linha informativa da saída exibida ao usuário.
 
 Confirme também que comandos de alteração são recusados. Não tente uma mudança
 real; apenas verifique que o usuário não consegue entrar em modo de sistema:
@@ -125,3 +149,4 @@ do usuário antes de remover a chave pública.
 - [Huawei: Configuring an SSH User — NetEngine 8000](https://info.support.huawei.com/hedex/api/pages/EDOC1100363264/AEN0403J/06/resources/software/nev8r10_vrpv8r16/user/galaxy/v8r23c00/vrp_netconf_cfg1_0069.html)
 - [Huawei: authentication-mode on VTY interfaces](https://info.support.huawei.com/hedex/api/pages/EDOC1100363264/AEN0403J/06/resources/command/yunshan/AUTHENTICATIONMETHOD%28TTY%29.html)
 - [Huawei: command privilege levels](https://info.support.huawei.com/hedex/api/pages/EDOC1000053358/YEF0907R/25/resources/en-us_cliref_0133032600.html)
+- [Huawei: command-privilege level](https://info.support.huawei.com/hedex/api/pages/EDOC1000053358/YEF0907R/25/resources/en-us_cliref_0133056210.html)

@@ -47,6 +47,7 @@ return array(
 	'command_timeout' => 'O comando excedeu o limite de %s segundos.',
 	'command_failed' => 'Falha ao executar o comando.',
 	'huawei_permission_denied' => 'Permissão negada pelo roteador: o usuário SSH não pode executar um comando necessário. Verifique a permissão para "screen-length 0 temporary" e para a consulta selecionada.',
+	'huawei_ssh_error' => 'Não foi possível estabelecer a sessão SSH com o roteador. Consulte o log do container para ver o motivo informado pelo cliente SSH.',
 	'telnet_error' => 'Erro de Telnet: %s',
 	'records_not_found' => 'Nenhum registro encontrado para %s.',
 	'use_network_prefix' => 'Informe o prefixo da rede no parâmetro.',

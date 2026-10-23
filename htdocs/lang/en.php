@@ -47,6 +47,7 @@ return array(
 	'command_timeout' => 'Command timed out after %s seconds.',
 	'command_failed' => 'Command failed.',
 	'huawei_permission_denied' => 'Permission denied by the router: the SSH user cannot run a required command. Check permission for "screen-length 0 temporary" and for the selected query.',
+	'huawei_ssh_error' => 'Could not establish the SSH session with the router. Check the container log for the reason reported by the SSH client.',
 	'telnet_error' => 'Telnet error: %s',
 	'records_not_found' => 'No records found for %s.',
 	'use_network_prefix' => 'Enter the network prefix in the parameter.',

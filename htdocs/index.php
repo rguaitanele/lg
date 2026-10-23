@@ -745,6 +745,7 @@ function process($url, $exec, $return_buffer = FALSE)
 	$raw_output = '';
 	$lines = $line = $is_exception = FALSE;
 	$huawei_permission_reported = FALSE;
+	$huawei_ssh_error_reported = FALSE;
 	$index = 0;
 	$str_in = array();
 
@@ -840,6 +841,16 @@ function process($url, $exec, $return_buffer = FALSE)
 
 			if ($os == 'huawei')
 			{
+				// Older VRP releases only support RSA/SHA-1 for host keys and/or
+				// public-key authentication. OpenSSH 8.8+ disables it by default.
+				// Append it only for Huawei connections; modern algorithms remain
+				// preferred whenever the router offers them.
+				if (!($sshauthtype == 'password' AND $_CONFIG['sshpwdcommand'] == 'plink'))
+				{
+					$params[] = '-o HostKeyAlgorithms=+ssh-rsa';
+					$params[] = '-o PubkeyAcceptedAlgorithms=+ssh-rsa';
+				}
+
 				$params[] = ($sshauthtype == 'password' AND $_CONFIG['sshpwdcommand'] == 'plink')
 					? '-t'
 					: '-tt';
@@ -885,7 +896,7 @@ function process($url, $exec, $return_buffer = FALSE)
 			{
 				$huawei_input = "screen-length 0 temporary\n".$exec."quit\n";
 				$shell_command = 'printf %s '.escapeshellarg($huawei_input)
-					.' | '.$ssh_path.' '.implode(' ', $params);
+					.' | '.$ssh_path.' '.implode(' ', $params).' 2>&1';
 			}
 			else
 			{
@@ -925,6 +936,26 @@ function process($url, $exec, $return_buffer = FALSE)
 
 							$output = t('huawei_permission_denied')."\n";
 							$huawei_permission_reported = TRUE;
+						}
+					}
+
+					if ($os == 'huawei' AND huawei_is_ssh_error($output))
+					{
+						error_log(
+							'LG Huawei SSH error: router='.$router
+							.' command='.$command
+							.' ssh_message='.trim($output)
+						);
+
+						if (!$return_buffer)
+						{
+							if ($huawei_ssh_error_reported)
+							{
+								continue;
+							}
+
+							$output = t('huawei_ssh_error')."\n";
+							$huawei_ssh_error_reported = TRUE;
 						}
 					}
 

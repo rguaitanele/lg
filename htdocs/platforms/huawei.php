@@ -57,6 +57,17 @@ function huawei_is_permission_error($output)
 }
 
 /**
+ * Detect errors emitted locally by the OpenSSH client.
+ */
+function huawei_is_ssh_error($output)
+{
+	return preg_match(
+		'/^(?:ssh:|Permission denied|Connection (?:closed|reset)|kex_exchange_identification:|Unable to negotiate|Host key verification failed|Load key |sign_and_send_pubkey:|no matching host key type found)/i',
+		trim($output)
+	);
+}
+
+/**
  * Enrich Huawei BGP peer output with AS, IP and received-route links.
  * Returns NULL when the current command is handled by the generic parser.
  */

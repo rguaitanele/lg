@@ -1,4 +1,4 @@
-FROM php:7.4-apache-bullseye
+FROM php:8.4.27-apache-bookworm
 
 ARG BUILD_DATE=unknown
 ARG VCS_REF=unknown
@@ -14,14 +14,11 @@ LABEL org.opencontainers.image.title="HSDN PHP Looking Glass" \
       org.opencontainers.image.revision="${VCS_REF}" \
       org.opencontainers.image.version="${IMAGE_VERSION}"
 
-COPY docker/debian-bullseye.sources.list /etc/apt/sources.list
-
-RUN apt-get -o Acquire::Check-Valid-Until=false update \
+RUN apt-get update \
     && apt-get install -y --no-install-recommends bash ssh openssl libgmp-dev sshpass graphviz \
     && rm -rf /var/lib/apt/lists/*
 
-RUN ln -s /usr/include/x86_64-linux-gnu/gmp.h /usr/include/gmp.h \
-    && docker-php-ext-install -j$(nproc) gmp
+RUN docker-php-ext-install -j$(nproc) gmp
 
 RUN mkdir -p /var/log/ /var/www/.ssh /var/lib/lg \
     && touch /var/log/looking-glass.log \

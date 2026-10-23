@@ -43,6 +43,35 @@ build-container:
         --build-arg VCS_REF="$CI_COMMIT_SHA" \
         --build-arg IMAGE_VERSION="$VERSION" \
         --tag "$IMAGE" .
+
+      PHP_VERSION="$(docker run --rm "$IMAGE" php -r 'echo PHP_VERSION;')"
+      if [ "$PHP_VERSION" != "8.4.27" ]; then
+        echo "ERRO: versão inesperada do PHP: $PHP_VERSION (esperada: 8.4.27)."
+        exit 1
+      fi
+
+      docker run --rm "$IMAGE" php -r \
+        'exit(extension_loaded("gmp") ? 0 : 1);'
+
+      docker run --rm "$IMAGE" sh -c \
+        'find /var/www/html -type f -name "*.php" -print0 | xargs -0 -n1 php -l'
+
+      CONTAINER_ID="$(docker run --detach "$IMAGE")"
+      trap 'docker logs "$CONTAINER_ID" 2>&1 || true; docker rm --force "$CONTAINER_ID" >/dev/null 2>&1 || true' EXIT
+      HEALTH_STATUS="starting"
+      for ATTEMPT in $(seq 1 12); do
+        HEALTH_STATUS="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$CONTAINER_ID")"
+        [ "$HEALTH_STATUS" = "healthy" ] && break
+        [ "$HEALTH_STATUS" = "unhealthy" ] && break
+        sleep 5
+      done
+      if [ "$HEALTH_STATUS" != "healthy" ]; then
+        echo "ERRO: smoke test HTTP falhou; estado do container: $HEALTH_STATUS."
+        exit 1
+      fi
+      docker rm --force "$CONTAINER_ID" >/dev/null
+      trap - EXIT
+
       docker push "$IMAGE"
 
       DOCKERHUB_IMAGE="$DOCKERHUB_USERNAME/$DOCKERHUB_REPOSITORY:$VERSION"

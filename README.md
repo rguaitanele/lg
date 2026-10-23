@@ -8,10 +8,11 @@ PHP Version of BGP Looking Glass script, based on the Perl sources: https://gith
 - Automatic conversion IPs to subnets using Merit RADb for MikroTik (http://www.ra.net/).
 - Drawing graph of BGP AS pathes using GraphViz toolkit.
 - Responsive interface with Portuguese and English language selection.
-- Works on php 5.2.0 and above.
+- The Docker image uses PHP 8.4.27 or newer from the supported PHP 8.4 branch.
 
 ### System Requirements
-- php version 5.2.0 and above with Sockets and Filter (http://www.php.net/).
+- PHP 8.4.27 or a newer security release from a supported PHP branch, with
+  Sockets and Filter (https://www.php.net/).
 - For SSH connections:
   - Password authentication requires **sshpass** or Putty **plink** command (http://www.chiark.greenend.org.uk/~sgtatham/putty/download.html).
   - Private key authentication requires **ssh**.
@@ -51,6 +52,10 @@ The GitLab CI pipeline publishes the same image to the GitLab Container
 Registry and Docker Hub. Configure the protected CI/CD variables
 `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` before running it. Creating a Git tag
 publishes that version and also promotes it to `latest`.
+
+The pipeline validates the PHP version, the GMP extension, PHP syntax and the
+HTTP health check before publishing an image. Do not deploy images based on PHP
+7.4: that branch is end-of-life and does not receive regular security releases.
 
 Operational examples for the startup script, SSH key generation and a
 read-only Huawei NE8000 user are available in [`examples/`](examples/README.md).
